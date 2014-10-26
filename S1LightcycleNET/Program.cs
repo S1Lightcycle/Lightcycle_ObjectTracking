@@ -30,7 +30,7 @@ namespace S1LightcycleNET
 
             //output windows
             CvWindow cvwindow = new CvWindow("blobs");
-            Window subwindow = new Window("subtracted");
+            CvWindow subwindow = new CvWindow("subtracted");
             Window window = new Window("original");
 
             if(!capture.IsOpened()){
@@ -46,11 +46,13 @@ namespace S1LightcycleNET
             //Background subtractor, alternatives: MOG, GMG
             BackgroundSubtractor subtractor = new BackgroundSubtractorMOG2();
             int key = -1;
-            while (key == -1)
-            {
+            while (key == -1) {
+
+
                 //get new frame from camera
                 capture.Read(frame);
                 Mat sub = new Mat();
+
 
                 //determines how fast stationary objects are incorporated into the background mask ( higher = faster)
                 double learningRate = 0.001;
@@ -58,29 +60,40 @@ namespace S1LightcycleNET
                 //perform background subtraction with selected subtractor.
                 subtractor.Run(frame, sub, learningRate);
 
+
                 //show the unaltered camera output
                 window.ShowImage(frame);
 
-                IplImage src = (IplImage) sub;
-                IplImage binary = new IplImage(src.Size, BitDepth.U8, 1);
 
-                CvBlobs blobs = new CvBlobs();
-                blobs.Label(binary);
-
-                IplImage render = new IplImage(src.Size, BitDepth.U8, 3);
+                IplImage src = (IplImage)sub;
 
                 //binarize image
-                Cv.Threshold(src, src, 100, 255, ThresholdType.Truncate);
+                Cv.Threshold(src, src, 250, 255, ThresholdType.Binary);
+                
+
+                IplConvKernel element = Cv.CreateStructuringElementEx(5,5, 0, 0, ElementShape.Rect, null);
+                Cv.Erode(src, src, element, 1);
+                CvBlobs blobs = new CvBlobs();
+
+                blobs.Label(src);
+                
+                
+                IplImage render = new IplImage(src.Size, BitDepth.U8, 3);
+
+
 
                 blobs.RenderBlobs(src, render);
-
-
-
+                
+                
+                
                 cvwindow.ShowImage(render);
-                subwindow.ShowImage(sub);
-
+                subwindow.ShowImage(src);
+                
                 key = Cv2.WaitKey(1);
             }
+
+            
+            
         }
 
     }
