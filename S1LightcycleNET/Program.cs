@@ -30,7 +30,7 @@ namespace S1LightcycleNET
 
             //output windows
             CvWindow cvwindow = new CvWindow("blobs");
-            Window subwindow = new Window("subtracted");
+            CvWindow subwindow = new CvWindow("subtracted");
             Window window = new Window("original");
 
             if(!capture.IsOpened()){
@@ -66,22 +66,28 @@ namespace S1LightcycleNET
 
 
                 IplImage src = (IplImage)sub;
-                IplImage binary = new IplImage(src.Size, BitDepth.U8, 1);
 
-                CvBlobs blobs = new CvBlobs();
-                blobs.Label(binary);
-
-                IplImage render = new IplImage(src.Size, BitDepth.U8, 3);
-                
                 //binarize image
-                Cv.Threshold(src, src, 100, 255, ThresholdType.Binary);
+                Cv.Threshold(src, src, 250, 255, ThresholdType.Binary);
                 
+
+                IplConvKernel element = Cv.CreateStructuringElementEx(5,5, 0, 0, ElementShape.Rect, null);
+                Cv.Erode(src, src, element, 1);
+                CvBlobs blobs = new CvBlobs();
+
+                blobs.Label(src);
+                
+                
+                IplImage render = new IplImage(src.Size, BitDepth.U8, 3);
+
+
+
                 blobs.RenderBlobs(src, render);
                 
                 
                 
                 cvwindow.ShowImage(render);
-                subwindow.ShowImage(sub);
+                subwindow.ShowImage(src);
                 
                 key = Cv2.WaitKey(1);
             }
