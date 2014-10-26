@@ -46,13 +46,11 @@ namespace S1LightcycleNET
             //Background subtractor, alternatives: MOG, GMG
             BackgroundSubtractor subtractor = new BackgroundSubtractorMOG2();
             int key = -1;
-            while (key == -1) {
-
-
+            while (key == -1)
+            {
                 //get new frame from camera
                 capture.Read(frame);
                 Mat sub = new Mat();
-
 
                 //determines how fast stationary objects are incorporated into the background mask ( higher = faster)
                 double learningRate = 0.001;
@@ -60,34 +58,29 @@ namespace S1LightcycleNET
                 //perform background subtraction with selected subtractor.
                 subtractor.Run(frame, sub, learningRate);
 
-
                 //show the unaltered camera output
                 window.ShowImage(frame);
 
-
-                IplImage src = (IplImage)sub;
+                IplImage src = (IplImage) sub;
                 IplImage binary = new IplImage(src.Size, BitDepth.U8, 1);
 
                 CvBlobs blobs = new CvBlobs();
                 blobs.Label(binary);
 
                 IplImage render = new IplImage(src.Size, BitDepth.U8, 3);
-                
+
                 //binarize image
-                Cv.Threshold(src, src, 100, 255, ThresholdType.Binary);
-                
+                Cv.Threshold(src, src, 100, 255, ThresholdType.Truncate);
+
                 blobs.RenderBlobs(src, render);
-                
-                
-                
+
+
+
                 cvwindow.ShowImage(render);
                 subwindow.ShowImage(sub);
-                
+
                 key = Cv2.WaitKey(1);
             }
-
-            
-            
         }
 
     }
