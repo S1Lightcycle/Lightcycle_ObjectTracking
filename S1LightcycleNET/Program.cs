@@ -71,10 +71,10 @@ namespace S1LightcycleNET
                 Cv.Threshold(src, src, 250, 255, ThresholdType.Binary);
                 
 
-                IplConvKernel element = Cv.CreateStructuringElementEx(5,5, 0, 0, ElementShape.Rect, null);
+                IplConvKernel element = Cv.CreateStructuringElementEx(2,2, 0, 0, ElementShape.Rect, null);
                 Cv.Erode(src, src, element, 1);
+                Cv.Dilate(src, src, element, 1);
                 CvBlobs blobs = new CvBlobs();
-
                 blobs.Label(src);
                 
                 

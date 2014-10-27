@@ -115,3 +115,4 @@ C:\Users\green\Documents\Visual Studio 2013\Projects\Lightcycle_ObjectTracking\S
 C:\Users\green\Documents\Visual Studio 2013\Projects\Lightcycle_ObjectTracking\S1LightcycleNET\bin\Debug\OpenCvSharp.Blob.xml
 C:\Users\green\Documents\Visual Studio 2013\Projects\Lightcycle_ObjectTracking\S1LightcycleNET\bin\Debug\OpenCvSharp.CPlusPlus.xml
 C:\Users\green\Documents\Visual Studio 2013\Projects\Lightcycle_ObjectTracking\S1LightcycleNET\bin\Debug\OpenCvSharp.Extensions.xml
+C:\Users\green\Documents\Visual Studio 2013\Projects\Lightcycle_ObjectTracking\S1LightcycleNET\obj\Debug\S1LightcycleNET.csprojResolveAssemblyReference.cache
