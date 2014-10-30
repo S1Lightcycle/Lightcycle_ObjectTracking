@@ -33,7 +33,7 @@ namespace S1LightcycleNET
             //output windows
             CvWindow cvwindow = new CvWindow("blobs");
             CvWindow subwindow = new CvWindow("subtracted");
-            Window window = new Window("original");
+            //Window window = new Window("original");
 
             if(!capture.IsOpened()){
                 return;
@@ -41,8 +41,8 @@ namespace S1LightcycleNET
 
 
             //setting capture resolution
-            capture.Set(CAPTURE_WIDTH_PROPERTY, 640);
-            capture.Set(CAPTURE_HEIGHT_PROPERTY, 480);
+            capture.Set(CAPTURE_WIDTH_PROPERTY, 360);
+            capture.Set(CAPTURE_HEIGHT_PROPERTY, 240);
 
 
             //Background subtractor, alternatives: MOG, GMG
@@ -62,14 +62,14 @@ namespace S1LightcycleNET
 
 
                 //determines how fast stationary objects are incorporated into the background mask ( higher = faster)
-                double learningRate = 0.01;
+                double learningRate = 0.001;
 
                 //perform background subtraction with selected subtractor.
                 subtractor.Run(frame, sub, learningRate);
 
 
                 //show the unaltered camera output
-                window.ShowImage(frame);
+                //window.ShowImage(frame);
 
 
                 IplImage src = (IplImage)sub;
@@ -78,17 +78,25 @@ namespace S1LightcycleNET
                 Cv.Threshold(src, src, 250, 255, ThresholdType.Binary);
                 
 
-                IplConvKernel element = Cv.CreateStructuringElementEx(2,2, 0, 0, ElementShape.Rect, null);
+                IplConvKernel element = Cv.CreateStructuringElementEx(4,4, 0, 0, ElementShape.Rect, null);
                 Cv.Erode(src, src, element, 1);
                 Cv.Dilate(src, src, element, 1);
                 CvBlobs blobs = new CvBlobs();
                 blobs.Label(src);
-                
+
+
+                int blobMINsize = 2500;
+                int blobMAXsize = 50000;
+                blobs.FilterByArea(blobMINsize, blobMAXsize);
                 
                 IplImage render = new IplImage(src.Size, BitDepth.U8, 3);
-
-
-
+                CvBlob largest = blobs.LargestBlob();
+                if (largest != null) {
+                    blobs.FilterByArea(largest.Area - 1500, largest.Area);
+                    Console.Out.WriteLine(blobs.Count);
+                    Console.Out.WriteLine(largest.Area);
+                }
+                
                 blobs.RenderBlobs(src, render);
                 
                 
