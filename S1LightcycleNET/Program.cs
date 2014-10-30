@@ -28,9 +28,6 @@ namespace S1LightcycleNET
             //webcam
             VideoCapture capture = new VideoCapture(0);
             
-            //program will fail without thread.sleep on some webcam models
-            //webcam will try to provide frames while initializing, but will provide broken frames (Mat[0*0*CV_8UC1]) which crash the program later on
-            Thread.Sleep(1000);
             Mat frame = new Mat();
 
             //output windows
@@ -53,9 +50,14 @@ namespace S1LightcycleNET
             int key = -1;
             while (key == -1) {
 
-
                 //get new frame from camera
                 capture.Read(frame);
+
+                //frame height == 0 => camera hasn't been initialized properly and provides garbage data
+                while (frame.Height == 0)
+                {
+                    capture.Read(frame);
+                }
                 Mat sub = new Mat();
 
 
