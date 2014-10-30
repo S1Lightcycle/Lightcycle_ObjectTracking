@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
 
 using System.Drawing;
 using OpenCvSharp.CPlusPlus;
@@ -26,6 +27,10 @@ namespace S1LightcycleNET
 
             //webcam
             VideoCapture capture = new VideoCapture(0);
+            
+            //program will fail without thread.sleep on some webcam models
+            //webcam will initialize, but will provide broken frames (Mat[0*0*CV_8UC1]) which crash the program
+            Thread.Sleep(1000);
             Mat frame = new Mat();
 
             //output windows
@@ -55,7 +60,7 @@ namespace S1LightcycleNET
 
 
                 //determines how fast stationary objects are incorporated into the background mask ( higher = faster)
-                double learningRate = 0.001;
+                double learningRate = 0.01;
 
                 //perform background subtraction with selected subtractor.
                 subtractor.Run(frame, sub, learningRate);
