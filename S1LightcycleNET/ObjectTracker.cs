@@ -16,121 +16,104 @@ namespace S1LightcycleNET
 {
     class ObjectTracker
     {
-        public Tuple<int, int> FirstCarCoordinate { get; private set; }
-        public Tuple<int, int> SecondCarCoordinate { get; private set; }
-
         private const int CAPTURE_WIDTH_PROPERTY = 3;
         private const int CAPTURE_HEIGHT_PROPERTY = 4;
 
-        private readonly VideoCapture capture;
-        private readonly Mat frame;
+        private const int BLOB_MIN_SIZE = 2500;
+        private const int BLOB_MAX_SIZE = 50000;
 
+        private readonly VideoCapture capture;
         private readonly CvWindow blobWindow;
         private readonly CvWindow subWindow;
-        private readonly Window originalWindow;
 
         private readonly BackgroundSubtractor subtractor;
 
-        private bool stop;
+        private Mat frame;
+
+        private CvBlobs blobs;
 
         public ObjectTracker()
         {
+            //webcam
             capture = new VideoCapture(0);
-            
-            frame = new Mat();
-
-            //output windows
             blobWindow = new CvWindow("blobs");
             subWindow = new CvWindow("subtracted");
-            originalWindow = new Window("original");
 
-            capture.Set(CAPTURE_WIDTH_PROPERTY, 360);
+            //setting capture resolution
+            capture.Set(CAPTURE_WIDTH_PROPERTY, 320);
             capture.Set(CAPTURE_HEIGHT_PROPERTY, 240);
 
+            //Background subtractor, alternatives: MOG, GMG
             subtractor = new BackgroundSubtractorMOG2();
         }
 
-        public void StartTracking()
+        public Tuple<Coordinate, Coordinate> track()
         {
-            //delete me
-            FirstCarCoordinate = new Tuple<int, int>(1, 2);
-            stop = false;
-            Task trackingTask = new Task(() => track());
-            trackingTask.Start();
-        }
 
-        public void StopTracking()
-        {
-            stop = true;
-        }
+            frame = new Mat();
 
-        private void track()
-        {
-            
-            Console.WriteLine("Entering track");
-            while (stop == false)
+            //get new frame from camera
+            capture.Read(frame);
+
+            //frame height == 0 => camera hasn't been initialized properly and provides garbage data
+            while (frame.Height == 0)
             {
-
-                //get new frame from camera
                 capture.Read(frame);
-
-                //frame height == 0 => camera hasn't been initialized properly and provides garbage data
-                while (frame.Height == 0)
-                {
-                    capture.Read(frame);
-                }
-                Mat sub = new Mat();
-
-
-                //determines how fast stationary objects are incorporated into the background mask ( higher = faster)
-                double learningRate = 0.001;
-
-                //perform background subtraction with selected subtractor.
-                subtractor.Run(frame, sub, learningRate);
-
-
-                //show the unaltered camera output
-                //originalWindow.ShowImage(frame);
-
-
-                IplImage src = (IplImage)sub;
-
-                //binarize image
-                Cv.Threshold(src, src, 250, 255, ThresholdType.Binary);
-
-
-                IplConvKernel element = Cv.CreateStructuringElementEx(4, 4, 0, 0, ElementShape.Rect, null);
-                Cv.Erode(src, src, element, 1);
-                Cv.Dilate(src, src, element, 1);
-                CvBlobs blobs = new CvBlobs();
-                blobs.Label(src);
-
-
-                int blobMINsize = 2500;
-                int blobMAXsize = 50000;
-                blobs.FilterByArea(blobMINsize, blobMAXsize);
-
-                IplImage render = new IplImage(src.Size, BitDepth.U8, 3);
-                CvBlob largest = blobs.LargestBlob();
-                if (largest != null)
-                {
-                    blobs.FilterByArea(largest.Area - 1500, largest.Area);
-                    Console.Out.WriteLine(blobs.Count);
-                    Console.Out.WriteLine(largest.Area);
-                }
-
-                blobs.RenderBlobs(src, render);
-                try
-                {
-                    blobWindow.ShowImage(render);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.ToString());
-                }
-                subWindow.ShowImage(src);
             }
+
+            //determines how fast stationary objects are incorporated into the background mask ( higher = faster)
+            double learningRate = 0.001;
+
+            Mat sub = new Mat();
+
+            //perform background subtraction with selected subtractor.
+            subtractor.Run(frame, sub, learningRate);
+
+            IplImage src = (IplImage)sub;
+
+            //binarize image
+            Cv.Threshold(src, src, 250, 255, ThresholdType.Binary);
+
+
+            IplConvKernel element = Cv.CreateStructuringElementEx(4, 4, 0, 0, ElementShape.Rect, null);
+            Cv.Erode(src, src, element, 1);
+            Cv.Dilate(src, src, element, 1);
+            blobs = new CvBlobs();
+            blobs.Label(src);
+
+            IplImage render = new IplImage(src.Size, BitDepth.U8, 3);
+
+            CvBlob largest = getLargestBlob(BLOB_MIN_SIZE, BLOB_MAX_SIZE);
+            CvBlob secondLargest = null;
+
+            if (largest != null)
+            {
+                secondLargest = getLargestBlob(largest.Area - 1500, largest.Area);
+            }
+
+            blobs.RenderBlobs(src, render);
+
+            blobWindow.ShowImage(render);
+            subWindow.ShowImage(src);
+
+            Cv2.WaitKey(1);
+            return new Tuple<Coordinate, Coordinate>(calculateCenter(largest), calculateCenter(secondLargest));
         }
 
+        private Coordinate calculateCenter(CvBlob blob)
+        {
+            if (blob == null)
+            {
+                return new Coordinate(-1, -1);
+            }
+            CvPoint center = blob.CalcCentroid();
+            return new Coordinate(center.X, center.Y);
+        }
+
+        private CvBlob getLargestBlob(int minBlobSize, int maxBlobSize)
+        {
+            blobs.FilterByArea(minBlobSize, maxBlobSize);
+            return blobs.LargestBlob();
+        }
     }
 }
