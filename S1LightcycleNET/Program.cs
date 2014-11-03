@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
 
 using System.Drawing;
 using OpenCvSharp.CPlusPlus;
@@ -26,12 +27,13 @@ namespace S1LightcycleNET
 
             //webcam
             VideoCapture capture = new VideoCapture(0);
+            
             Mat frame = new Mat();
 
             //output windows
             CvWindow cvwindow = new CvWindow("blobs");
             CvWindow subwindow = new CvWindow("subtracted");
-            Window window = new Window("original");
+            //Window window = new Window("original");
 
             if(!capture.IsOpened()){
                 return;
@@ -39,8 +41,8 @@ namespace S1LightcycleNET
 
 
             //setting capture resolution
-            capture.Set(CAPTURE_WIDTH_PROPERTY, 640);
-            capture.Set(CAPTURE_HEIGHT_PROPERTY, 480);
+            capture.Set(CAPTURE_WIDTH_PROPERTY, 360);
+            capture.Set(CAPTURE_HEIGHT_PROPERTY, 240);
 
 
             //Background subtractor, alternatives: MOG, GMG
@@ -48,9 +50,14 @@ namespace S1LightcycleNET
             int key = -1;
             while (key == -1) {
 
-
                 //get new frame from camera
                 capture.Read(frame);
+
+                //frame height == 0 => camera hasn't been initialized properly and provides garbage data
+                while (frame.Height == 0)
+                {
+                    capture.Read(frame);
+                }
                 Mat sub = new Mat();
 
 
@@ -62,7 +69,7 @@ namespace S1LightcycleNET
 
 
                 //show the unaltered camera output
-                window.ShowImage(frame);
+                //window.ShowImage(frame);
 
 
                 IplImage src = (IplImage)sub;
@@ -71,17 +78,25 @@ namespace S1LightcycleNET
                 Cv.Threshold(src, src, 250, 255, ThresholdType.Binary);
                 
 
-                IplConvKernel element = Cv.CreateStructuringElementEx(5,5, 0, 0, ElementShape.Rect, null);
+                IplConvKernel element = Cv.CreateStructuringElementEx(4,4, 0, 0, ElementShape.Rect, null);
                 Cv.Erode(src, src, element, 1);
+                Cv.Dilate(src, src, element, 1);
                 CvBlobs blobs = new CvBlobs();
-
                 blobs.Label(src);
-                
+
+
+                int blobMINsize = 2500;
+                int blobMAXsize = 50000;
+                blobs.FilterByArea(blobMINsize, blobMAXsize);
                 
                 IplImage render = new IplImage(src.Size, BitDepth.U8, 3);
-
-
-
+                CvBlob largest = blobs.LargestBlob();
+                if (largest != null) {
+                    blobs.FilterByArea(largest.Area - 1500, largest.Area);
+                    Console.Out.WriteLine(blobs.Count);
+                    Console.Out.WriteLine(largest.Area);
+                }
+                
                 blobs.RenderBlobs(src, render);
                 
                 
