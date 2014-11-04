@@ -32,6 +32,8 @@ namespace S1LightcycleNET
 
         private CvBlobs blobs;
 
+        private CvPoint firstCar;
+
         public ObjectTracker()
         {
             //webcam
@@ -45,6 +47,8 @@ namespace S1LightcycleNET
 
             //Background subtractor, alternatives: MOG, GMG
             subtractor = new BackgroundSubtractorMOG2();
+
+            firstCar = CvPoint.Empty;
         }
 
         public Tuple<Coordinate, Coordinate> track()
@@ -96,8 +100,42 @@ namespace S1LightcycleNET
             blobWindow.ShowImage(render);
             subWindow.ShowImage(src);
 
+            
+
             Cv2.WaitKey(1);
-            return new Tuple<Coordinate, Coordinate>(calculateCenter(largest), calculateCenter(secondLargest));
+
+            //compare distance between last largest blob and current largest and second largest blob
+            //if distance between the last largest and current largest is shorter than between the last largest and second largest 
+            //return the current largest as first element
+            //else return the second largest as second element
+            if (largest != null)
+            {
+                CvPoint largestCenter = largest.CalcCentroid();
+                CvPoint secondCenter = secondLargest.CalcCentroid();
+
+                if (firstCar == CvPoint.Empty)
+                {
+                    firstCar = largestCenter;
+                    return new Tuple<Coordinate, Coordinate>(cvPointToCoordinate(largestCenter),
+                        cvPointToCoordinate(secondCenter));
+                }
+                else if (firstCar.DistanceTo(largestCenter) < firstCar.DistanceTo(secondCenter))
+                {
+                    firstCar = largestCenter;
+                    return new Tuple<Coordinate, Coordinate>(cvPointToCoordinate(largestCenter),
+                        cvPointToCoordinate(secondCenter));
+                }
+                else
+                {
+                    firstCar = secondCenter;
+                    return new Tuple<Coordinate, Coordinate>(cvPointToCoordinate(secondCenter),
+                        cvPointToCoordinate(largestCenter));
+                }
+            }
+            else
+            {
+                return new Tuple<Coordinate, Coordinate>(calculateCenter(largest), calculateCenter(secondLargest));
+            }
         }
 
         private Coordinate calculateCenter(CvBlob blob)
@@ -114,6 +152,11 @@ namespace S1LightcycleNET
         {
             blobs.FilterByArea(minBlobSize, maxBlobSize);
             return blobs.LargestBlob();
+        }
+
+        private Coordinate cvPointToCoordinate(CvPoint point)
+        {
+            return new Coordinate(point.X, point.Y);
         }
     }
 }
