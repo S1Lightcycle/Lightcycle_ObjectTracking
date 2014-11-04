@@ -46,9 +46,9 @@ namespace S1LightcycleNET
 #if DEBUG
             capture.Set(CAPTURE_WIDTH_PROPERTY, 320);
             capture.Set(CAPTURE_HEIGHT_PROPERTY, 240);
-#elif
-            capture.Set(CAPTURE_WIDTH_PROPERTY, SystemInformation.VirtualScreen.Width)
-            capture.Set(CAPTURE_HEIGHT_PROPERTY, SystemInformation.VirtualScreen.Height)
+#else
+            capture.Set(CAPTURE_WIDTH_PROPERTY, SystemInformation.VirtualScreen.Width);
+            capture.Set(CAPTURE_HEIGHT_PROPERTY, SystemInformation.VirtualScreen.Height);
 #endif
 
             //Background subtractor, alternatives: MOG, GMG
