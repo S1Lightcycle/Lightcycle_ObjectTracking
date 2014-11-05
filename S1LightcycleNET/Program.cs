@@ -18,12 +18,12 @@ namespace S1LightcycleNET
         static void Main(string[] args)
         {
             ObjectTracker tracker = new ObjectTracker();
-            for (;;)
+            tracker.StartTracking();
+            for (; ; )
             {
-                var Coordinates = tracker.track();
-                Console.WriteLine("Largest Blob: " + Coordinates.Item1.XCoord + "\t" + Coordinates.Item1.YCoord);
-                Console.WriteLine("Second Largest Blob: " + Coordinates.Item2.XCoord + "\t" + Coordinates.Item2.YCoord);
+                Console.WriteLine("X: " + tracker.FirstCarCoordinate.XCoord + "\t" + tracker.FirstCarCoordinate.YCoord);
             }
+            Console.ReadKey();
         }
 
     }
