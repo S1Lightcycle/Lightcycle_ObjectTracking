@@ -34,6 +34,8 @@ namespace S1LightcycleNET
 
         private bool stop;
 
+        private CvPoint firstCar;
+
         public ObjectTracker()
         {
             capture = new VideoCapture(0);
@@ -44,6 +46,8 @@ namespace S1LightcycleNET
             capture.Set(CAPTURE_HEIGHT_PROPERTY, 240);
 
             subtractor = new BackgroundSubtractorMOG2();
+
+            firstCar = CvPoint.Empty;
         }
 
         public void StartTracking()
@@ -110,8 +114,27 @@ namespace S1LightcycleNET
                 blobs.RenderBlobs(src, render);
                 Cv2.WaitKey(1);
 
-                FirstCarCoordinate = calculateCenter(largest);
-                SecondCarCoordinate = calculateCenter(secondLargest);
+                if (largest != null)
+                {
+                    CvPoint largestCenter = largest.CalcCentroid();
+                    CvPoint secondCenter = secondLargest.CalcCentroid();
+
+                    if ((firstCar == CvPoint.Empty) || (firstCar.DistanceTo(largestCenter) < firstCar.DistanceTo(secondCenter)))
+                    {
+                        firstCar = largestCenter;
+                        FirstCarCoordinate = calculateCenter(largest);
+                        SecondCarCoordinate = calculateCenter(secondLargest);
+                    } else
+                    {
+                        firstCar = secondCenter;
+                        FirstCarCoordinate = calculateCenter(secondLargest);
+                        SecondCarCoordinate = calculateCenter(largest);
+                    }
+                } else
+                {
+                    FirstCarCoordinate = calculateCenter(largest);
+                    SecondCarCoordinate = calculateCenter(secondLargest);
+                }
             }
         }
 
