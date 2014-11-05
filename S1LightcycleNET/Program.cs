@@ -21,8 +21,8 @@ namespace S1LightcycleNET
             for (;;)
             {
                 var Coordinates = tracker.track();
-                Console.WriteLine("Largest Blob: " + Coordinates.Item1.XCoord + "\t" + Coordinates.Item1.YCoord);
-                Console.WriteLine("Second Largest Blob: " + Coordinates.Item2.XCoord + "\t" + Coordinates.Item2.YCoord);
+                Console.WriteLine("LBlob: " + Coordinates.Item1.XCoord + "\t" + Coordinates.Item1.YCoord + "\tSBlob: " + Coordinates.Item2.XCoord + "\t" + Coordinates.Item2.YCoord);
+                Console.WriteLine();
             }
         }
 

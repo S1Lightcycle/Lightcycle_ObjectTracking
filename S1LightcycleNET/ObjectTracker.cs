@@ -17,6 +17,9 @@ namespace S1LightcycleNET
 {
     class ObjectTracker
     {
+        public Coordinate FirstCarCoordinate { get; set; }
+        public Coordinate SecondCarCoordinate { get; set; }
+
         private const int CAPTURE_WIDTH_PROPERTY = 3;
         private const int CAPTURE_HEIGHT_PROPERTY = 4;
 
@@ -57,7 +60,7 @@ namespace S1LightcycleNET
             firstCar = CvPoint.Empty;
         }
 
-        public Tuple<Coordinate, Coordinate> track()
+        public void track()
         {
 
             frame = new Mat();
@@ -119,28 +122,23 @@ namespace S1LightcycleNET
                 CvPoint largestCenter = largest.CalcCentroid();
                 CvPoint secondCenter = secondLargest.CalcCentroid();
 
-                if (firstCar == CvPoint.Empty)
+                if ((firstCar == CvPoint.Empty) || (firstCar.DistanceTo(largestCenter) < firstCar.DistanceTo(secondCenter)))
                 {
                     firstCar = largestCenter;
-                    return new Tuple<Coordinate, Coordinate>(cvPointToCoordinate(largestCenter),
-                        cvPointToCoordinate(secondCenter));
-                }
-                else if (firstCar.DistanceTo(largestCenter) < firstCar.DistanceTo(secondCenter))
-                {
-                    firstCar = largestCenter;
-                    return new Tuple<Coordinate, Coordinate>(cvPointToCoordinate(largestCenter),
-                        cvPointToCoordinate(secondCenter));
+                    FirstCarCoordinate = cvPointToCoordinate(largestCenter);
+                    SecondCarCoordinate = cvPointToCoordinate(secondCenter);
                 }
                 else
                 {
                     firstCar = secondCenter;
-                    return new Tuple<Coordinate, Coordinate>(cvPointToCoordinate(secondCenter),
-                        cvPointToCoordinate(largestCenter));
+                    FirstCarCoordinate = cvPointToCoordinate(secondCenter);
+                    SecondCarCoordinate = cvPointToCoordinate(largestCenter);
                 }
             }
             else
             {
-                return new Tuple<Coordinate, Coordinate>(calculateCenter(largest), calculateCenter(secondLargest));
+                FirstCarCoordinate = calculateCenter(largest);
+                SecondCarCoordinate = calculateCenter(secondLargest);
             }
         }
 
