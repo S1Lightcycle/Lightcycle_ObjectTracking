@@ -117,6 +117,11 @@ namespace S1LightcycleNET
             //if distance between the last largest and current largest is shorter than between the last largest and second largest 
             //return the current largest as first element
             //else return the second largest as second element
+            linearPrediction(largest, secondLargest);
+        }
+
+        private void linearPrediction(CvBlob largest, CvBlob secondLargest)
+        {
             if (largest != null)
             {
                 CvPoint largestCenter = largest.CalcCentroid();
