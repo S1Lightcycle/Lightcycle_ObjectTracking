@@ -116,27 +116,34 @@ namespace S1LightcycleNET
                 blobs.RenderBlobs(src, render);
                 Cv2.WaitKey(1);
 
-                if (largest != null)
-                {
-                    CvPoint largestCenter = largest.CalcCentroid();
-                    CvPoint secondCenter = secondLargest.CalcCentroid();
+                linearPrediction(largest, secondLargest);
+            }
+        }
 
-                    if ((firstCar == CvPoint.Empty) || (firstCar.DistanceTo(largestCenter) < firstCar.DistanceTo(secondCenter)))
-                    {
-                        firstCar = largestCenter;
-                        FirstCarCoordinate = calculateCenter(largest);
-                        SecondCarCoordinate = calculateCenter(secondLargest);
-                    } else
-                    {
-                        firstCar = secondCenter;
-                        FirstCarCoordinate = calculateCenter(secondLargest);
-                        SecondCarCoordinate = calculateCenter(largest);
-                    }
-                } else
+        private void linearPrediction(CvBlob largest, CvBlob secondLargest)
+        {
+            if (largest != null)
+            {
+                CvPoint largestCenter = largest.CalcCentroid();
+                CvPoint secondCenter = secondLargest.CalcCentroid();
+
+                if ((firstCar == CvPoint.Empty) || (firstCar.DistanceTo(largestCenter) < firstCar.DistanceTo(secondCenter)))
                 {
+                    firstCar = largestCenter;
                     FirstCarCoordinate = calculateCenter(largest);
                     SecondCarCoordinate = calculateCenter(secondLargest);
                 }
+                else
+                {
+                    firstCar = secondCenter;
+                    FirstCarCoordinate = calculateCenter(secondLargest);
+                    SecondCarCoordinate = calculateCenter(largest);
+                }
+            }
+            else
+            {
+                FirstCarCoordinate = calculateCenter(largest);
+                SecondCarCoordinate = calculateCenter(secondLargest);
             }
         }
 
