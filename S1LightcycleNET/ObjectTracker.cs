@@ -16,8 +16,8 @@ namespace S1LightcycleNET
 {
     class ObjectTracker
     {
-        public Coordinate FirstCarCoordinate { get; private set; }
-        public Coordinate SecondCarCoordinate { get; private set; }
+        public Robot FirstCar { get; private set; }
+        public Robot SecondCar { get; private set; }
 
         private const int CAPTURE_WIDTH_PROPERTY = 3;
         private const int CAPTURE_HEIGHT_PROPERTY = 4;
@@ -34,7 +34,7 @@ namespace S1LightcycleNET
 
         private bool stop;
 
-        private CvPoint firstCar;
+        private CvPoint oldCar;
 
         public ObjectTracker()
         {
@@ -47,15 +47,15 @@ namespace S1LightcycleNET
 
             subtractor = new BackgroundSubtractorMOG2();
 
-            firstCar = CvPoint.Empty;
+            oldCar = CvPoint.Empty;
         }
 
         public void StartTracking()
         {
             stop = false;
-            firstCar = CvPoint.Empty;
-            FirstCarCoordinate = new Coordinate(-1, -1);
-            SecondCarCoordinate = new Coordinate(-1, -1);
+            oldCar = CvPoint.Empty;
+            FirstCar = new Robot(new Coordinate(-1, -1), -1, -1);
+            SecondCar = new Robot(new Coordinate(-1, -1), -1, -1);
 
             Task trackingTask = new Task(() => track());
             trackingTask.Start();
@@ -127,23 +127,40 @@ namespace S1LightcycleNET
                 CvPoint largestCenter = largest.CalcCentroid();
                 CvPoint secondCenter = secondLargest.CalcCentroid();
 
-                if ((firstCar == CvPoint.Empty) || (firstCar.DistanceTo(largestCenter) < firstCar.DistanceTo(secondCenter)))
+                if ((oldCar == CvPoint.Empty) || (oldCar.DistanceTo(largestCenter) < oldCar.DistanceTo(secondCenter)))
                 {
-                    firstCar = largestCenter;
-                    FirstCarCoordinate = calculateCenter(largest);
-                    SecondCarCoordinate = calculateCenter(secondLargest);
+                    oldCar = largestCenter;
+                    FirstCar.Coord = cvPointToCoordinate(largestCenter);
+                    FirstCar.Width = calculateDiameter(largest.MaxX, largest.MinX);
+                    FirstCar.Height = calculateDiameter(largest.MaxY, largest.MinY);
+
+                    SecondCar.Coord = cvPointToCoordinate(secondCenter);
+                    SecondCar.Width = calculateDiameter(secondLargest.MaxX, secondLargest.MinX);
+                    SecondCar.Height = calculateDiameter(secondLargest.MaxY, secondLargest.MinY);
                 }
                 else
                 {
-                    firstCar = secondCenter;
-                    FirstCarCoordinate = calculateCenter(secondLargest);
-                    SecondCarCoordinate = calculateCenter(largest);
+                    oldCar = secondCenter;
+                    SecondCar.Coord = cvPointToCoordinate(largestCenter);
+                    SecondCar.Width = calculateDiameter(largest.MaxX, largest.MinX);
+                    SecondCar.Height = calculateDiameter(largest.MaxY, largest.MinY);
+
+                    FirstCar.Coord = cvPointToCoordinate(secondCenter);
+                    FirstCar.Width = calculateDiameter(secondLargest.MaxX, secondLargest.MinX);
+                    FirstCar.Height = calculateDiameter(secondLargest.MaxY, secondLargest.MinY);
                 }
             }
             else
             {
-                FirstCarCoordinate = calculateCenter(largest);
-                SecondCarCoordinate = calculateCenter(secondLargest);
+                FirstCar.Coord.XCoord = -1;
+                FirstCar.Coord.YCoord = -1;
+                FirstCar.Width = -1;
+                FirstCar.Height = -1;
+
+                SecondCar.Coord.XCoord = -1;
+                SecondCar.Coord.YCoord = -1;
+                SecondCar.Width = -1;
+                SecondCar.Height = -1;
             }
         }
 
@@ -166,6 +183,11 @@ namespace S1LightcycleNET
         private Coordinate cvPointToCoordinate(CvPoint point)
         {
             return new Coordinate(point.X, point.Y);
+        }
+
+        private int calculateDiameter(int max, int min)
+        {
+            return max - min;
         }
 
     }

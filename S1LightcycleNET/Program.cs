@@ -21,8 +21,8 @@ namespace S1LightcycleNET
             tracker.StartTracking();
             for (; ; )
             {
-                Console.WriteLine("X1: " + tracker.FirstCarCoordinate.XCoord + "\tY1:" + tracker.FirstCarCoordinate.YCoord);
-                Console.WriteLine("X2: " + tracker.FirstCarCoordinate.XCoord + "\tY2:" + tracker.FirstCarCoordinate.YCoord);
+                Console.WriteLine("X1: " + tracker.FirstCar.Coord.XCoord + "\tY1:" + tracker.FirstCar.Coord.YCoord);
+                Console.WriteLine("X2: " + tracker.SecondCar.Coord.XCoord + "\tY2:" + tracker.SecondCar.Coord.YCoord);
             }
         }
 
