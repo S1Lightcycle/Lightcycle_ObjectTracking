@@ -19,18 +19,10 @@ namespace S1LightcycleNET
         static void Main(string[] args)
         {
             ObjectTracker tracker = new ObjectTracker();
-            Dictionary<Coordinate, bool> asdf = new Dictionary<Coordinate, bool>();
-            asdf.Add(new Coordinate(1, 2), true);
-            if (asdf.ContainsKey(new Coordinate(1, 2)))
-            {
-                Console.WriteLine("jippii");
-            }
-            Console.ReadKey();
             for (;;)
             {
-                //var Coordinates = tracker.track();
-                //Console.WriteLine("LBlob: " + Coordinates.Item1.XCoord + "\t" + Coordinates.Item1.YCoord + "\tSBlob: " + Coordinates.Item2.XCoord + "\t" + Coordinates.Item2.YCoord);
-                //Console.WriteLine();
+                Console.WriteLine("LBlob: " + tracker.FirstCar.Coord.XCoord + "\t" + tracker.FirstCar.Coord.YCoord + "\tSBlob: " + tracker.SecondCar.Coord.XCoord + "\t" + tracker.SecondCar.Coord.YCoord);
+                Console.WriteLine();
             }
         }
 
