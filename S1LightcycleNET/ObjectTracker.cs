@@ -52,9 +52,11 @@ namespace S1LightcycleNET
 
         public void StartTracking()
         {
-            FirstCarCoordinate = new Coordinate(-1, -1);
-
             stop = false;
+            firstCar = CvPoint.Empty;
+            FirstCarCoordinate = new Coordinate(-1, -1);
+            SecondCarCoordinate = new Coordinate(-1, -1);
+
             Task trackingTask = new Task(() => track());
             trackingTask.Start();
         }

@@ -19,18 +19,10 @@ namespace S1LightcycleNET
         {
             ObjectTracker tracker = new ObjectTracker();
             tracker.StartTracking();
-            int x = 0;
             for (; ; )
             {
-                x++;
                 Console.WriteLine("X1: " + tracker.FirstCarCoordinate.XCoord + "\tY1:" + tracker.FirstCarCoordinate.YCoord);
                 Console.WriteLine("X2: " + tracker.FirstCarCoordinate.XCoord + "\tY2:" + tracker.FirstCarCoordinate.YCoord);
-                Console.WriteLine(x);
-                if (x == 100)
-                {
-                    tracker.StopTracking();
-                    break;
-                }
             }
         }
 
