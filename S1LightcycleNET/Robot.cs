@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace S1LightcycleNET
 {
-    class Robot
+    public class Robot
     {
         public Coordinate Coord { get; set; }
         public double Width { get; set; }
