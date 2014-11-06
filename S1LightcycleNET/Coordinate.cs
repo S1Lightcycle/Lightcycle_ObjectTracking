@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace S1LightcycleNET
 {
-    class Coordinate
+    public class Coordinate
     {
         public int XCoord { get; set; }
         public int YCoord { get; set; }

@@ -20,9 +20,9 @@ namespace S1LightcycleNET
             ObjectTracker tracker = new ObjectTracker();
             for (;;)
             {
-                var Coordinates = tracker.track();
-                Console.WriteLine("LBlob: " + Coordinates.Item1.XCoord + "\t" + Coordinates.Item1.YCoord + "\tSBlob: " + Coordinates.Item2.XCoord + "\t" + Coordinates.Item2.YCoord);
-                Console.WriteLine();
+                //var Coordinates = tracker.track();
+                //Console.WriteLine("LBlob: " + Coordinates.Item1.XCoord + "\t" + Coordinates.Item1.YCoord + "\tSBlob: " + Coordinates.Item2.XCoord + "\t" + Coordinates.Item2.YCoord);
+                //Console.WriteLine();
             }
         }
 

@@ -15,7 +15,7 @@ using OpenCvSharp.Blob;
 
 namespace S1LightcycleNET
 {
-    class ObjectTracker
+    public class ObjectTracker
     {
         public Coordinate FirstCarCoordinate { get; set; }
         public Coordinate SecondCarCoordinate { get; set; }
@@ -38,27 +38,23 @@ namespace S1LightcycleNET
 
         private CvPoint firstCar;
 
-        public ObjectTracker()
-        {
+
+        public ObjectTracker(int width = 1000, int height = 800) {
             //webcam
             capture = new VideoCapture(0);
             blobWindow = new CvWindow("blobs");
             subWindow = new CvWindow("subtracted");
 
             //setting capture resolution
-#if DEBUG
-            capture.Set(CAPTURE_WIDTH_PROPERTY, 320);
-            capture.Set(CAPTURE_HEIGHT_PROPERTY, 240);
-#else
-            capture.Set(CAPTURE_WIDTH_PROPERTY, SystemInformation.VirtualScreen.Width);
-            capture.Set(CAPTURE_HEIGHT_PROPERTY, SystemInformation.VirtualScreen.Height);
-#endif
+            capture.Set(CAPTURE_WIDTH_PROPERTY, width);
+            capture.Set(CAPTURE_HEIGHT_PROPERTY, height);
 
             //Background subtractor, alternatives: MOG, GMG
             subtractor = new BackgroundSubtractorMOG2();
 
             firstCar = CvPoint.Empty;
         }
+
 
         public void track()
         {
