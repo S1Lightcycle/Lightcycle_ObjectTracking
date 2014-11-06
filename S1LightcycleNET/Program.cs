@@ -10,6 +10,7 @@ using OpenCvSharp.CPlusPlus;
 using OpenCvSharp.Utilities;
 using OpenCvSharp;
 using OpenCvSharp.Blob;
+using System.Collections;
 
 namespace S1LightcycleNET
 {
@@ -18,6 +19,13 @@ namespace S1LightcycleNET
         static void Main(string[] args)
         {
             ObjectTracker tracker = new ObjectTracker();
+            Dictionary<Coordinate, bool> asdf = new Dictionary<Coordinate, bool>();
+            asdf.Add(new Coordinate(1, 2), true);
+            if (asdf.ContainsKey(new Coordinate(1, 2)))
+            {
+                Console.WriteLine("jippii");
+            }
+            Console.ReadKey();
             for (;;)
             {
                 //var Coordinates = tracker.track();
