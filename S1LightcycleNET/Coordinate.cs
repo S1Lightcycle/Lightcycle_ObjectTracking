@@ -6,10 +6,19 @@ using System.Threading.Tasks;
 
 namespace S1LightcycleNET
 {
-    class Coordinate
+    public class Coordinate
     {
         public int XCoord { get; set; }
         public int YCoord { get; set; }
+        
+        public override bool Equals(object obj) {
+            if (this.GetHashCode() != ((Coordinate)obj).GetHashCode()) return false;
+            return true;
+        }
+
+        public override int GetHashCode() {
+            return (XCoord * 0x1f1f1f1f) ^ YCoord;
+        }
 
         public Coordinate(int x, int y)
         {

@@ -10,6 +10,7 @@ using OpenCvSharp.CPlusPlus;
 using OpenCvSharp.Utilities;
 using OpenCvSharp;
 using OpenCvSharp.Blob;
+using System.Collections;
 
 namespace S1LightcycleNET
 {
@@ -20,8 +21,7 @@ namespace S1LightcycleNET
             ObjectTracker tracker = new ObjectTracker();
             for (;;)
             {
-                var Coordinates = tracker.track();
-                Console.WriteLine("LBlob: " + Coordinates.Item1.XCoord + "\t" + Coordinates.Item1.YCoord + "\tSBlob: " + Coordinates.Item2.XCoord + "\t" + Coordinates.Item2.YCoord);
+                Console.WriteLine("LBlob: " + tracker.FirstCar.Coord.XCoord + "\t" + tracker.FirstCar.Coord.YCoord + "\tSBlob: " + tracker.SecondCar.Coord.XCoord + "\t" + tracker.SecondCar.Coord.YCoord);
                 Console.WriteLine();
             }
         }
