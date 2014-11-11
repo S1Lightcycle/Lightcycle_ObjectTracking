@@ -22,8 +22,8 @@ namespace S1LightcycleNET
         private const int CAPTURE_WIDTH_PROPERTY = 3;
         private const int CAPTURE_HEIGHT_PROPERTY = 4;
 
-        private const int BLOB_MIN_SIZE = 2500;
-        private const int BLOB_MAX_SIZE = 50000;
+        public int BLOB_MIN_SIZE { get; set; }
+        public int BLOB_MAX_SIZE { get; set; }
 
         private readonly VideoCapture capture;
         private readonly Mat frame;
@@ -36,14 +36,14 @@ namespace S1LightcycleNET
 
         private CvPoint oldCar;
 
-        public ObjectTracker()
+        public ObjectTracker(int width = 1000, int height = 800)
         {
             capture = new VideoCapture(0);
 
             frame = new Mat();
 
-            capture.Set(CAPTURE_WIDTH_PROPERTY, 360);
-            capture.Set(CAPTURE_HEIGHT_PROPERTY, 240);
+            capture.Set(CAPTURE_WIDTH_PROPERTY, width);
+            capture.Set(CAPTURE_HEIGHT_PROPERTY, height);
 
             subtractor = new BackgroundSubtractorMOG2();
 
