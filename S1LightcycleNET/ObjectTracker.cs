@@ -90,7 +90,7 @@ namespace S1LightcycleNET
 
             if (largest != null)
             {
-                secondLargest = getLargestBlob(largest.Area, largest.Area - 1500);
+                secondLargest = getLargestBlob(largest.Area, largest.Area);
             }
 
             blobs.RenderBlobs(src, render);
