@@ -16,7 +16,7 @@ namespace S1LightcycleNET
         public int BLOB_MAX_SIZE { get; set; }
 
         //determines how fast stationary objects are incorporated into the background mask ( higher = faster)
-        private const double LEARNING_RATE = 0.001;
+        public double LEARNING_RATE { get; set; }
 
         private readonly VideoCapture capture;
         private readonly CvWindow blobWindow;
@@ -49,6 +49,7 @@ namespace S1LightcycleNET
 
             BLOB_MIN_SIZE = 2500;
             BLOB_MAX_SIZE = 50000;
+            LEARNING_RATE = 0.001;
         }
 
 
