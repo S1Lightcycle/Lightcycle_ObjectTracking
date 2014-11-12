@@ -1,6 +1,7 @@
 ﻿using OpenCvSharp.CPlusPlus;
 using OpenCvSharp;
 using OpenCvSharp.Blob;
+using System.Collections.Generic;
 
 namespace S1LightcycleNET
 {
@@ -8,6 +9,9 @@ namespace S1LightcycleNET
     {
         public Robot FirstCar { get; set; }
         public Robot SecondCar { get; set; }
+
+        public Queue<Coordinate> Player1PosQueue { get; set; }
+        public Queue<Coordinate> Player2PosQueue { get; set; }
 
         private const int CAPTURE_WIDTH_PROPERTY = 3;
         private const int CAPTURE_HEIGHT_PROPERTY = 4;
@@ -31,6 +35,10 @@ namespace S1LightcycleNET
         private CvPoint oldCar;
 
         public ObjectTracker(int width = 1000, int height = 800) {
+
+            Player1PosQueue = new Queue<Coordinate>();
+            Player2PosQueue = new Queue<Coordinate>();
+
             //webcam
             capture = new VideoCapture(0);
             blobWindow = new CvWindow("blobs");
@@ -123,9 +131,13 @@ namespace S1LightcycleNET
                     FirstCar.Width = calculateDiameter(largest.MaxX, largest.MinX);
                     FirstCar.Height = calculateDiameter(largest.MaxY, largest.MinY);
 
+                    Player1PosQueue.Enqueue(FirstCar.Coord);
+
                     SecondCar.Coord = cvPointToCoordinate(secondCenter);
                     SecondCar.Width = calculateDiameter(secondLargest.MaxX, secondLargest.MinX);
                     SecondCar.Height = calculateDiameter(secondLargest.MaxY, secondLargest.MinY);
+
+                    Player2PosQueue.Enqueue(SecondCar.Coord);
                 }
                 else
                 {
@@ -134,9 +146,13 @@ namespace S1LightcycleNET
                     SecondCar.Width = calculateDiameter(largest.MaxX, largest.MinX);
                     SecondCar.Height = calculateDiameter(largest.MaxY, largest.MinY);
 
+                    Player2PosQueue.Enqueue(SecondCar.Coord);
+
                     FirstCar.Coord = cvPointToCoordinate(secondCenter);
                     FirstCar.Width = calculateDiameter(secondLargest.MaxX, secondLargest.MinX);
                     FirstCar.Height = calculateDiameter(secondLargest.MaxY, secondLargest.MinY);
+
+                    Player1PosQueue.Enqueue(FirstCar.Coord);
                 }
             }
             else
