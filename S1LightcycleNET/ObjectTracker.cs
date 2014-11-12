@@ -52,8 +52,8 @@ namespace S1LightcycleNET
             subtractor = new BackgroundSubtractorMOG2();
 
             oldCar = CvPoint.Empty;
-            FirstCar = new Robot(new Coordinate(-1, -1), -1, -1);
-            SecondCar = new Robot(new Coordinate(-1, -1), -1, -1);
+            FirstCar = Robot.INVALID;
+            SecondCar = Robot.INVALID;
 
             BLOB_MIN_SIZE = 2500;
             BLOB_MAX_SIZE = 50000;
@@ -107,7 +107,10 @@ namespace S1LightcycleNET
             subWindow.ShowImage(src);
 
             Cv2.WaitKey(1);
-            linearPrediction(largest, secondLargest);
+            AssosciateBlobsWithPlayers(largest, secondLargest);
+
+            Player1PosQueue.Enqueue(FirstCar.Coord);
+            Player2PosQueue.Enqueue(SecondCar.Coord);
         }
 
         /// <summary>
@@ -117,7 +120,7 @@ namespace S1LightcycleNET
         /// </summary>
         /// <param name="largest">Largest detected blob</param>
         /// <param name="secondLargest">Second largest detected blob</param>
-        private void linearPrediction(CvBlob largest, CvBlob secondLargest)
+        private void AssosciateBlobsWithPlayers(CvBlob largest, CvBlob secondLargest)
         {
             if (largest != null)
             {
@@ -134,7 +137,6 @@ namespace S1LightcycleNET
                     SecondCar.Coord = cvPointToCoordinate(secondCenter);
                     SecondCar.Width = calculateDiameter(secondLargest.MaxX, secondLargest.MinX);
                     SecondCar.Height = calculateDiameter(secondLargest.MaxY, secondLargest.MinY);
-
                 }
                 else
                 {
@@ -151,21 +153,9 @@ namespace S1LightcycleNET
             }
             else
             {
-                FirstCar.Coord.XCoord = -1;
-                FirstCar.Coord.YCoord = -1;
-                FirstCar.Width = -1;
-                FirstCar.Height = -1;
-
-                SecondCar.Coord.XCoord = -1;
-                SecondCar.Coord.YCoord = -1;
-                SecondCar.Width = -1;
-                SecondCar.Height = -1;
+                FirstCar = Robot.INVALID;
+                SecondCar = Robot.INVALID;
             }
-
-
-            Player1PosQueue.Enqueue(FirstCar.Coord);
-            Player2PosQueue.Enqueue(SecondCar.Coord);
-
         }
 
         private CvBlob getLargestBlob(int minBlobSize, int maxBlobSize)

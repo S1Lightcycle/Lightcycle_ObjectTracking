@@ -8,6 +8,9 @@ namespace S1LightcycleNET
 {
     public class Coordinate
     {
+
+        public static readonly Coordinate INVALID = null;
+
         public int XCoord { get; set; }
         public int YCoord { get; set; }
         
