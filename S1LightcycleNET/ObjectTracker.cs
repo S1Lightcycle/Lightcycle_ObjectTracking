@@ -131,13 +131,10 @@ namespace S1LightcycleNET
                     FirstCar.Width = calculateDiameter(largest.MaxX, largest.MinX);
                     FirstCar.Height = calculateDiameter(largest.MaxY, largest.MinY);
 
-                    Player1PosQueue.Enqueue(FirstCar.Coord);
-
                     SecondCar.Coord = cvPointToCoordinate(secondCenter);
                     SecondCar.Width = calculateDiameter(secondLargest.MaxX, secondLargest.MinX);
                     SecondCar.Height = calculateDiameter(secondLargest.MaxY, secondLargest.MinY);
 
-                    Player2PosQueue.Enqueue(SecondCar.Coord);
                 }
                 else
                 {
@@ -146,13 +143,10 @@ namespace S1LightcycleNET
                     SecondCar.Width = calculateDiameter(largest.MaxX, largest.MinX);
                     SecondCar.Height = calculateDiameter(largest.MaxY, largest.MinY);
 
-                    Player2PosQueue.Enqueue(SecondCar.Coord);
-
                     FirstCar.Coord = cvPointToCoordinate(secondCenter);
                     FirstCar.Width = calculateDiameter(secondLargest.MaxX, secondLargest.MinX);
                     FirstCar.Height = calculateDiameter(secondLargest.MaxY, secondLargest.MinY);
 
-                    Player1PosQueue.Enqueue(FirstCar.Coord);
                 }
             }
             else
@@ -167,6 +161,11 @@ namespace S1LightcycleNET
                 SecondCar.Width = -1;
                 SecondCar.Height = -1;
             }
+
+
+            Player1PosQueue.Enqueue(FirstCar.Coord);
+            Player2PosQueue.Enqueue(SecondCar.Coord);
+
         }
 
         private CvBlob getLargestBlob(int minBlobSize, int maxBlobSize)
