@@ -8,14 +8,14 @@ namespace S1LightcycleNET
 {
     public class Robot
     {
-        public Coordinate Coord { get; set; }
+        public Queue<Coordinate> Coord { get; set; }
         public double Width { get; set; }
         public double Height { get; set; }
 
 
-        public Robot(Coordinate coord, int width, int height)
+        public Robot(int width, int height)
         {
-            Coord = coord;
+            Coord = new Queue<Coordinate>();
             Width = width;
             Height = height;
         }
