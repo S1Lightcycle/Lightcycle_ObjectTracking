@@ -33,7 +33,8 @@ namespace S1LightcycleNET
 
         private CvBlobs blobs;
 
-        private CvPoint oldCar;
+        private CvPoint oldFirstCar;
+        private CvPoint oldSecondCar;
         private bool IsTracking;
 
         public ObjectTracker(int width = 640, int height = 480) {
@@ -48,7 +49,7 @@ namespace S1LightcycleNET
             //Background subtractor, alternatives: MOG, GMG
             subtractor = new BackgroundSubtractorMOG2();
 
-            oldCar = CvPoint.Empty;
+            oldFirstCar = CvPoint.Empty;
             FirstCar = new Robot(-1, -1);
             SecondCar = new Robot(-1, -1);
 
@@ -58,7 +59,8 @@ namespace S1LightcycleNET
         }
 
         public void startTracking() {
-            oldCar = CvPoint.Empty;
+            oldFirstCar = CvPoint.Empty;
+            oldSecondCar = CvPoint.Empty;
             Thread trackingThread = new Thread(this.track);
             IsTracking = true;
             trackingThread.Priority = ThreadPriority.Highest;
@@ -107,9 +109,13 @@ namespace S1LightcycleNET
                 CvBlob largest = null;
                 CvBlob secondLargest = null;
 
-                if (blobList.Count >= 2)
+                if (blobList.Count >= 1)
                 {
                     largest = blobList[0];
+                }
+
+                if (blobList.Count >= 2)
+                {
                     secondLargest = blobList[1];
                 }
 
@@ -123,6 +129,9 @@ namespace S1LightcycleNET
                 if ((largest != null) && (secondLargest != null))
                 {
                     linearPrediction(largest, secondLargest);
+                } else if ((largest != null) && (secondLargest == null))
+                {
+                    linearPrediction(largest);
                 }
             }
         }
@@ -141,9 +150,12 @@ namespace S1LightcycleNET
                 CvPoint largestCenter = largest.CalcCentroid();
                 CvPoint secondCenter = secondLargest.CalcCentroid();
 
-                if ((oldCar == CvPoint.Empty) || (oldCar.DistanceTo(largestCenter) < oldCar.DistanceTo(secondCenter)))
+                if ((oldFirstCar == CvPoint.Empty) || 
+                    ((oldFirstCar.DistanceTo(largestCenter) < oldFirstCar.DistanceTo(secondCenter)) && 
+                    oldSecondCar.DistanceTo(largestCenter) > oldSecondCar.DistanceTo(secondCenter)))
                 {
-                    oldCar = largestCenter;
+                    oldFirstCar = largestCenter;
+                    oldSecondCar = secondCenter;
                     
                     FirstCar.Width = calculateDiameter(largest.MaxX, largest.MinX);
                     FirstCar.Height = calculateDiameter(largest.MaxY, largest.MinY);
@@ -156,7 +168,9 @@ namespace S1LightcycleNET
                 }
                 else
                 {
-                    oldCar = secondCenter;
+                    oldFirstCar = secondCenter;
+                    oldSecondCar = largestCenter;
+
                     SecondCar.Width = calculateDiameter(largest.MaxX, largest.MinX);
                     SecondCar.Height = calculateDiameter(largest.MaxY, largest.MinY);
 
@@ -168,12 +182,33 @@ namespace S1LightcycleNET
             }
         }
 
+        private void linearPrediction(CvBlob blob)
+        {
+            CvPoint center = blob.CalcCentroid();
+
+            if (oldFirstCar.DistanceTo(center) < oldSecondCar.DistanceTo(center))
+            {
+                EnqueuePlayers(cvPointToCoordinate(center), null);
+            }
+            else
+            {
+                EnqueuePlayers(null, cvPointToCoordinate(center));
+            }
+        }
+
         private void EnqueuePlayers(Coordinate FirstPlayer, Coordinate SecondPlayer)
         {
             lock(ObjectTracker.Lock)
             {
-                FirstCar.Coord.Enqueue(FirstPlayer);
-                SecondCar.Coord.Enqueue(SecondPlayer);
+                if (FirstPlayer != null)
+                {
+                    FirstCar.Coord.Enqueue(FirstPlayer);
+                }
+
+                if (SecondPlayer != null)
+                {
+                    SecondCar.Coord.Enqueue(SecondPlayer);
+                }
             }
         }
 
