@@ -10,32 +10,25 @@ namespace S1LightcycleNET
     public class ObjectTracker
     {
 
+        private readonly VideoCapture capture;
+        private readonly CvWindow blobWindow;
+        private readonly BackgroundSubtractor subtractor;
+        private Mat frame;
+        private CvBlobs blobs;
+        private CvPoint oldFirstCar;
+        private CvPoint oldSecondCar;
+        private bool IsTracking;
+        private const int CAPTURE_WIDTH_PROPERTY = 3;
+        private const int CAPTURE_HEIGHT_PROPERTY = 4;
         private static object Lock = new object();
 
         public Robot FirstCar { get; set; }
         public Robot SecondCar { get; set; }
-
-        private const int CAPTURE_WIDTH_PROPERTY = 3;
-        private const int CAPTURE_HEIGHT_PROPERTY = 4;
-
         public int BLOB_MIN_SIZE { get; set; }
         public int BLOB_MAX_SIZE { get; set; }
 
         //determines how fast stationary objects are incorporated into the background mask ( higher = faster)
         public double LEARNING_RATE { get; set; }
-
-        private readonly VideoCapture capture;
-        private readonly CvWindow blobWindow;
-
-        private readonly BackgroundSubtractor subtractor;
-
-        private Mat frame;
-
-        private CvBlobs blobs;
-
-        private CvPoint oldFirstCar;
-        private CvPoint oldSecondCar;
-        private bool IsTracking;
 
         public ObjectTracker(int width = 640, int height = 480) {
             //webcam
@@ -58,21 +51,21 @@ namespace S1LightcycleNET
             LEARNING_RATE = 0.001;
         }
 
-        public void startTracking() {
+        public void StartTracking() {
             oldFirstCar = CvPoint.Empty;
             oldSecondCar = CvPoint.Empty;
-            Thread trackingThread = new Thread(this.track);
+            Thread trackingThread = new Thread(this.Track);
             IsTracking = true;
             trackingThread.Priority = ThreadPriority.Highest;
             trackingThread.Start();
 
         }
 
-        public void stoptracking() {
+        public void Stoptracking() {
             IsTracking = false;
         }
 
-        public void track()
+        public void Track()
         {
             while (IsTracking) { 
                 frame = new Mat();
@@ -128,10 +121,10 @@ namespace S1LightcycleNET
                 Cv2.WaitKey(1);
                 if ((largest != null) && (secondLargest != null))
                 {
-                    linearPrediction(largest, secondLargest);
+                    LinearPrediction(largest, secondLargest);
                 } else if ((largest != null) && (secondLargest == null))
                 {
-                    linearPrediction(largest);
+                    LinearPrediction(largest);
                 }
             }
         }
@@ -143,7 +136,7 @@ namespace S1LightcycleNET
         /// </summary>
         /// <param name="largest">Largest detected blob</param>
         /// <param name="secondLargest">Second largest detected blob</param>
-        private void linearPrediction(CvBlob largest, CvBlob secondLargest)
+        private void LinearPrediction(CvBlob largest, CvBlob secondLargest)
         {
             if (largest != null)
             {
@@ -157,67 +150,67 @@ namespace S1LightcycleNET
                     oldFirstCar = largestCenter;
                     oldSecondCar = secondCenter;
                     
-                    FirstCar.Width = calculateDiameter(largest.MaxX, largest.MinX);
-                    FirstCar.Height = calculateDiameter(largest.MaxY, largest.MinY);
+                    FirstCar.Width = CalculateDiameter(largest.MaxX, largest.MinX);
+                    FirstCar.Height = CalculateDiameter(largest.MaxY, largest.MinY);
 
                     
-                    SecondCar.Width = calculateDiameter(secondLargest.MaxX, secondLargest.MinX);
-                    SecondCar.Height = calculateDiameter(secondLargest.MaxY, secondLargest.MinY);
+                    SecondCar.Width = CalculateDiameter(secondLargest.MaxX, secondLargest.MinX);
+                    SecondCar.Height = CalculateDiameter(secondLargest.MaxY, secondLargest.MinY);
 
-                    EnqueuePlayers(cvPointToCoordinate(largestCenter), cvPointToCoordinate(secondCenter));
+                    EnqueuePlayers(CvPointToCoordinate(largestCenter), CvPointToCoordinate(secondCenter));
                 }
                 else
                 {
                     oldFirstCar = secondCenter;
                     oldSecondCar = largestCenter;
 
-                    SecondCar.Width = calculateDiameter(largest.MaxX, largest.MinX);
-                    SecondCar.Height = calculateDiameter(largest.MaxY, largest.MinY);
+                    SecondCar.Width = CalculateDiameter(largest.MaxX, largest.MinX);
+                    SecondCar.Height = CalculateDiameter(largest.MaxY, largest.MinY);
 
-                    FirstCar.Width = calculateDiameter(secondLargest.MaxX, secondLargest.MinX);
-                    FirstCar.Height = calculateDiameter(secondLargest.MaxY, secondLargest.MinY);
+                    FirstCar.Width = CalculateDiameter(secondLargest.MaxX, secondLargest.MinX);
+                    FirstCar.Height = CalculateDiameter(secondLargest.MaxY, secondLargest.MinY);
 
-                    EnqueuePlayers(cvPointToCoordinate(secondCenter), cvPointToCoordinate(largestCenter));
+                    EnqueuePlayers(CvPointToCoordinate(secondCenter), CvPointToCoordinate(largestCenter));
                 }
             }
         }
 
-        private void linearPrediction(CvBlob blob)
+        private void LinearPrediction(CvBlob blob)
         {
             CvPoint center = blob.CalcCentroid();
 
             if (oldFirstCar.DistanceTo(center) < oldSecondCar.DistanceTo(center))
             {
-                EnqueuePlayers(cvPointToCoordinate(center), null);
+                EnqueuePlayers(CvPointToCoordinate(center), null);
             }
             else
             {
-                EnqueuePlayers(null, cvPointToCoordinate(center));
+                EnqueuePlayers(null, CvPointToCoordinate(center));
             }
         }
 
-        private void EnqueuePlayers(Coordinate FirstPlayer, Coordinate SecondPlayer)
+        private void EnqueuePlayers(Coordinate firstPlayer, Coordinate secondPlayer)
         {
             lock(ObjectTracker.Lock)
             {
-                if (FirstPlayer != null)
+                if (firstPlayer != null)
                 {
-                    FirstCar.Coord.Enqueue(FirstPlayer);
+                    FirstCar.Coord.Enqueue(firstPlayer);
                 }
 
-                if (SecondPlayer != null)
+                if (secondPlayer != null)
                 {
-                    SecondCar.Coord.Enqueue(SecondPlayer);
+                    SecondCar.Coord.Enqueue(secondPlayer);
                 }
             }
         }
 
-        private Coordinate cvPointToCoordinate(CvPoint point)
+        private Coordinate CvPointToCoordinate(CvPoint point)
         {
             return new Coordinate(point.X, point.Y);
         }
 
-        private int calculateDiameter(int max, int min)
+        private int CalculateDiameter(int max, int min)
         {
             return max - min;
         }
