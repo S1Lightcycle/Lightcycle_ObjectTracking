@@ -2,16 +2,18 @@
 using OpenCvSharp;
 using OpenCvSharp.Blob;
 using System.Collections.Generic;
+using System.Threading;
+using System.Linq;
 
 namespace S1LightcycleNET
 {
     public class ObjectTracker
     {
+
+        private static object Lock = new object();
+
         public Robot FirstCar { get; set; }
         public Robot SecondCar { get; set; }
-
-        public Queue<Coordinate> Player1PosQueue { get; set; }
-        public Queue<Coordinate> Player2PosQueue { get; set; }
 
         private const int CAPTURE_WIDTH_PROPERTY = 3;
         private const int CAPTURE_HEIGHT_PROPERTY = 4;
@@ -24,7 +26,6 @@ namespace S1LightcycleNET
 
         private readonly VideoCapture capture;
         private readonly CvWindow blobWindow;
-        private readonly CvWindow subWindow;
 
         private readonly BackgroundSubtractor subtractor;
 
@@ -32,17 +33,14 @@ namespace S1LightcycleNET
 
         private CvBlobs blobs;
 
-        private CvPoint oldCar;
+        private CvPoint oldFirstCar;
+        private CvPoint oldSecondCar;
+        private bool IsTracking;
 
-        public ObjectTracker(int width = 1000, int height = 800) {
-
-            Player1PosQueue = new Queue<Coordinate>();
-            Player2PosQueue = new Queue<Coordinate>();
-
+        public ObjectTracker(int width = 640, int height = 480) {
             //webcam
             capture = new VideoCapture(0);
             blobWindow = new CvWindow("blobs");
-            subWindow = new CvWindow("subtracted");
 
             //setting capture resolution
             capture.Set(CAPTURE_WIDTH_PROPERTY, width);
@@ -51,66 +49,91 @@ namespace S1LightcycleNET
             //Background subtractor, alternatives: MOG, GMG
             subtractor = new BackgroundSubtractorMOG2();
 
-            oldCar = CvPoint.Empty;
-            FirstCar = Robot.INVALID;
-            SecondCar = Robot.INVALID;
+            oldFirstCar = CvPoint.Empty;
+            FirstCar = new Robot(-1, -1);
+            SecondCar = new Robot(-1, -1);
 
             BLOB_MIN_SIZE = 2500;
             BLOB_MAX_SIZE = 50000;
             LEARNING_RATE = 0.001;
         }
 
+        public void startTracking() {
+            oldFirstCar = CvPoint.Empty;
+            oldSecondCar = CvPoint.Empty;
+            Thread trackingThread = new Thread(this.track);
+            IsTracking = true;
+            trackingThread.Priority = ThreadPriority.Highest;
+            trackingThread.Start();
+
+        }
+
+        public void stoptracking() {
+            IsTracking = false;
+        }
 
         public void track()
         {
+            while (IsTracking) { 
+                frame = new Mat();
 
-            frame = new Mat();
-
-            //get new frame from camera
-            capture.Read(frame);
-
-            //frame height == 0 => camera hasn't been initialized properly and provides garbage data
-            while (frame.Height == 0)
-            {
+                //get new frame from camera
                 capture.Read(frame);
+
+                //frame height == 0 => camera hasn't been initialized properly and provides garbage data
+                while (frame.Height == 0)
+                {
+                    capture.Read(frame);
+                }
+
+                Mat sub = new Mat();
+
+                //perform background subtraction with selected subtractor.
+                subtractor.Run(frame, sub, LEARNING_RATE);
+
+                IplImage src = (IplImage)sub;
+
+                //binarize image
+                Cv.Threshold(src, src, 250, 255, ThresholdType.Binary);
+
+                IplConvKernel element = Cv.CreateStructuringElementEx(4, 4, 0, 0, ElementShape.Rect, null);
+                Cv.Erode(src, src, element, 1);
+                Cv.Dilate(src, src, element, 1);
+                blobs = new CvBlobs();
+                blobs.Label(src);
+
+                blobs.FilterByArea(BLOB_MIN_SIZE, BLOB_MAX_SIZE);
+
+                var blobList = SortBlobsBySize(blobs);
+
+                CvBlob largest = null;
+                CvBlob secondLargest = null;
+
+                if (blobList.Count >= 1)
+                {
+                    largest = blobList[0];
+                }
+
+                if (blobList.Count >= 2)
+                {
+                    secondLargest = blobList[1];
+                }
+
+                IplImage render = new IplImage(src.Size, BitDepth.U8, 3);
+
+                blobs.RenderBlobs(src, render);
+
+                blobWindow.ShowImage(render);
+
+                Cv2.WaitKey(1);
+                if ((largest != null) && (secondLargest != null))
+                {
+                    linearPrediction(largest, secondLargest);
+                } else if ((largest != null) && (secondLargest == null))
+                {
+                    linearPrediction(largest);
+                }
             }
-
-            Mat sub = new Mat();
-
-            //perform background subtraction with selected subtractor.
-            subtractor.Run(frame, sub, LEARNING_RATE);
-
-            IplImage src = (IplImage)sub;
-
-            //binarize image
-            Cv.Threshold(src, src, 250, 255, ThresholdType.Binary);
-
-            IplConvKernel element = Cv.CreateStructuringElementEx(4, 4, 0, 0, ElementShape.Rect, null);
-            Cv.Erode(src, src, element, 1);
-            Cv.Dilate(src, src, element, 1);
-            blobs = new CvBlobs();
-            blobs.Label(src);
-
-            IplImage render = new IplImage(src.Size, BitDepth.U8, 3);
-
-            CvBlob largest = getLargestBlob(BLOB_MIN_SIZE, BLOB_MAX_SIZE);
-            CvBlob secondLargest = null;
-
-            if (largest != null)
-            {
-                secondLargest = getLargestBlob(largest.Area, largest.Area);
-            }
-
-            blobs.RenderBlobs(src, render);
-
-            blobWindow.ShowImage(render);
-            subWindow.ShowImage(src);
-
-            Cv2.WaitKey(1);
-            AssosciateBlobsWithPlayers(largest, secondLargest);
-
-            Player1PosQueue.Enqueue(FirstCar.Coord);
-            Player2PosQueue.Enqueue(SecondCar.Coord);
         }
 
         /// <summary>
@@ -120,48 +143,73 @@ namespace S1LightcycleNET
         /// </summary>
         /// <param name="largest">Largest detected blob</param>
         /// <param name="secondLargest">Second largest detected blob</param>
-        private void AssosciateBlobsWithPlayers(CvBlob largest, CvBlob secondLargest)
+        private void linearPrediction(CvBlob largest, CvBlob secondLargest)
         {
             if (largest != null)
             {
                 CvPoint largestCenter = largest.CalcCentroid();
                 CvPoint secondCenter = secondLargest.CalcCentroid();
 
-                if ((oldCar == CvPoint.Empty) || (oldCar.DistanceTo(largestCenter) < oldCar.DistanceTo(secondCenter)))
+                if ((oldFirstCar == CvPoint.Empty) || 
+                    ((oldFirstCar.DistanceTo(largestCenter) < oldFirstCar.DistanceTo(secondCenter)) && 
+                    oldSecondCar.DistanceTo(largestCenter) > oldSecondCar.DistanceTo(secondCenter)))
                 {
-                    oldCar = largestCenter;
-                    FirstCar.Coord = cvPointToCoordinate(largestCenter);
+                    oldFirstCar = largestCenter;
+                    oldSecondCar = secondCenter;
+                    
                     FirstCar.Width = calculateDiameter(largest.MaxX, largest.MinX);
                     FirstCar.Height = calculateDiameter(largest.MaxY, largest.MinY);
 
-                    SecondCar.Coord = cvPointToCoordinate(secondCenter);
+                    
                     SecondCar.Width = calculateDiameter(secondLargest.MaxX, secondLargest.MinX);
                     SecondCar.Height = calculateDiameter(secondLargest.MaxY, secondLargest.MinY);
+
+                    EnqueuePlayers(cvPointToCoordinate(largestCenter), cvPointToCoordinate(secondCenter));
                 }
                 else
                 {
-                    oldCar = secondCenter;
-                    SecondCar.Coord = cvPointToCoordinate(largestCenter);
+                    oldFirstCar = secondCenter;
+                    oldSecondCar = largestCenter;
+
                     SecondCar.Width = calculateDiameter(largest.MaxX, largest.MinX);
                     SecondCar.Height = calculateDiameter(largest.MaxY, largest.MinY);
 
-                    FirstCar.Coord = cvPointToCoordinate(secondCenter);
                     FirstCar.Width = calculateDiameter(secondLargest.MaxX, secondLargest.MinX);
                     FirstCar.Height = calculateDiameter(secondLargest.MaxY, secondLargest.MinY);
 
+                    EnqueuePlayers(cvPointToCoordinate(secondCenter), cvPointToCoordinate(largestCenter));
                 }
-            }
-            else
-            {
-                FirstCar = Robot.INVALID;
-                SecondCar = Robot.INVALID;
             }
         }
 
-        private CvBlob getLargestBlob(int minBlobSize, int maxBlobSize)
+        private void linearPrediction(CvBlob blob)
         {
-            blobs.FilterByArea(minBlobSize, maxBlobSize);
-            return blobs.LargestBlob();
+            CvPoint center = blob.CalcCentroid();
+
+            if (oldFirstCar.DistanceTo(center) < oldSecondCar.DistanceTo(center))
+            {
+                EnqueuePlayers(cvPointToCoordinate(center), null);
+            }
+            else
+            {
+                EnqueuePlayers(null, cvPointToCoordinate(center));
+            }
+        }
+
+        private void EnqueuePlayers(Coordinate FirstPlayer, Coordinate SecondPlayer)
+        {
+            lock(ObjectTracker.Lock)
+            {
+                if (FirstPlayer != null)
+                {
+                    FirstCar.Coord.Enqueue(FirstPlayer);
+                }
+
+                if (SecondPlayer != null)
+                {
+                    SecondCar.Coord.Enqueue(SecondPlayer);
+                }
+            }
         }
 
         private Coordinate cvPointToCoordinate(CvPoint point)
@@ -172,6 +220,18 @@ namespace S1LightcycleNET
         private int calculateDiameter(int max, int min)
         {
             return max - min;
+        }
+
+        private List<CvBlob> SortBlobsBySize(CvBlobs blobs)
+        {
+            List<CvBlob> blobList = new List<CvBlob>();
+
+            foreach(CvBlob blob in blobs.Values)
+            {
+                blobList.Add(blob);
+            }
+
+            return blobList.OrderByDescending(x => x.Area).ToList();
         }
     }
 }
