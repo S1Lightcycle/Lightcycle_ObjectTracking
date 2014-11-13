@@ -1,23 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
-
-using System.Drawing;
-using System.Windows.Forms.VisualStyles;
-using OpenCvSharp.CPlusPlus;
-using OpenCvSharp.Utilities;
+﻿using OpenCvSharp.CPlusPlus;
 using OpenCvSharp;
 using OpenCvSharp.Blob;
+using System.Collections.Generic;
+using System.Threading;
 
 namespace S1LightcycleNET
 {
-    class ObjectTracker
+    public class ObjectTracker
     {
-        public Robot FirstCar { get; private set; }
-        public Robot SecondCar { get; private set; }
+        public Robot FirstCar { get; set; }
+        public Robot SecondCar { get; set; }
 
         private const int CAPTURE_WIDTH_PROPERTY = 3;
         private const int CAPTURE_HEIGHT_PROPERTY = 4;
@@ -25,53 +17,60 @@ namespace S1LightcycleNET
         public int BLOB_MIN_SIZE { get; set; }
         public int BLOB_MAX_SIZE { get; set; }
 
-        private readonly VideoCapture capture;
-        private readonly Mat frame;
+        //determines how fast stationary objects are incorporated into the background mask ( higher = faster)
+        public double LEARNING_RATE { get; set; }
 
-        private CvBlobs blobs;
+        private readonly VideoCapture capture;
+        private readonly CvWindow blobWindow;
+        private readonly CvWindow subWindow;
 
         private readonly BackgroundSubtractor subtractor;
 
-        private bool stop;
+        private Mat frame;
+
+        private CvBlobs blobs;
 
         private CvPoint oldCar;
+        private bool IsTracking;
 
-        public ObjectTracker(int width = 1000, int height = 800)
-        {
+        public ObjectTracker(int width = 640, int height = 480) {
+            //webcam
             capture = new VideoCapture(0);
+            blobWindow = new CvWindow("blobs");
+            subWindow = new CvWindow("subtracted");
 
-            frame = new Mat();
-
+            //setting capture resolution
             capture.Set(CAPTURE_WIDTH_PROPERTY, width);
             capture.Set(CAPTURE_HEIGHT_PROPERTY, height);
 
+            //Background subtractor, alternatives: MOG, GMG
             subtractor = new BackgroundSubtractorMOG2();
 
             oldCar = CvPoint.Empty;
+            FirstCar = new Robot(-1, -1);
+            SecondCar = new Robot(-1, -1);
+
+            BLOB_MIN_SIZE = 2500;
+            BLOB_MAX_SIZE = 50000;
+            LEARNING_RATE = 0.001;
         }
 
-        public void StartTracking()
-        {
-            stop = false;
-            oldCar = CvPoint.Empty;
-            FirstCar = new Robot(new Coordinate(-1, -1), -1, -1);
-            SecondCar = new Robot(new Coordinate(-1, -1), -1, -1);
+        public void startTracking() {
+            Thread trackingThread = new Thread(this.track);
+            IsTracking = true;
+            trackingThread.Priority = ThreadPriority.Highest;
+            trackingThread.Start();
 
-            Task trackingTask = new Task(() => track());
-            trackingTask.Start();
         }
 
-        public void StopTracking()
-        {
-            stop = true;
+        public void stoptracking() {
+            IsTracking = false;
         }
 
-        private void track()
+        public void track()
         {
-
-            Console.WriteLine("Entering track");
-            while (stop == false)
-            {
+            while (IsTracking) { 
+                frame = new Mat();
 
                 //get new frame from camera
                 capture.Read(frame);
@@ -81,21 +80,16 @@ namespace S1LightcycleNET
                 {
                     capture.Read(frame);
                 }
+
                 Mat sub = new Mat();
 
-
-                //determines how fast stationary objects are incorporated into the background mask ( higher = faster)
-                double learningRate = 0.001;
-
                 //perform background subtraction with selected subtractor.
-                subtractor.Run(frame, sub, learningRate);
-
+                subtractor.Run(frame, sub, LEARNING_RATE);
 
                 IplImage src = (IplImage)sub;
 
                 //binarize image
                 Cv.Threshold(src, src, 250, 255, ThresholdType.Binary);
-
 
                 IplConvKernel element = Cv.CreateStructuringElementEx(4, 4, 0, 0, ElementShape.Rect, null);
                 Cv.Erode(src, src, element, 1);
@@ -110,16 +104,26 @@ namespace S1LightcycleNET
 
                 if (largest != null)
                 {
-                    secondLargest = getLargestBlob(largest.Area - 1500, largest.Area);
+                    secondLargest = getLargestBlob(largest.Area, largest.Area);
                 }
 
                 blobs.RenderBlobs(src, render);
-                Cv2.WaitKey(1);
 
+                blobWindow.ShowImage(render);
+                subWindow.ShowImage(src);
+
+                Cv2.WaitKey(1);
                 linearPrediction(largest, secondLargest);
             }
         }
 
+        /// <summary>
+        /// Compares the distance between the largest blob of the last cycle and the current largest and second largest blob.
+        /// If the distance between the last largest and current largest is shorter than between the last largest and second largest 
+        /// it returns the current largest as first element, otherwise it returns the second largest as second element
+        /// </summary>
+        /// <param name="largest">Largest detected blob</param>
+        /// <param name="secondLargest">Second largest detected blob</param>
         private void linearPrediction(CvBlob largest, CvBlob secondLargest)
         {
             if (largest != null)
@@ -130,48 +134,30 @@ namespace S1LightcycleNET
                 if ((oldCar == CvPoint.Empty) || (oldCar.DistanceTo(largestCenter) < oldCar.DistanceTo(secondCenter)))
                 {
                     oldCar = largestCenter;
-                    FirstCar.Coord = cvPointToCoordinate(largestCenter);
+                    
                     FirstCar.Width = calculateDiameter(largest.MaxX, largest.MinX);
                     FirstCar.Height = calculateDiameter(largest.MaxY, largest.MinY);
 
-                    SecondCar.Coord = cvPointToCoordinate(secondCenter);
+                    
                     SecondCar.Width = calculateDiameter(secondLargest.MaxX, secondLargest.MinX);
                     SecondCar.Height = calculateDiameter(secondLargest.MaxY, secondLargest.MinY);
+
                 }
                 else
                 {
                     oldCar = secondCenter;
-                    SecondCar.Coord = cvPointToCoordinate(largestCenter);
                     SecondCar.Width = calculateDiameter(largest.MaxX, largest.MinX);
                     SecondCar.Height = calculateDiameter(largest.MaxY, largest.MinY);
 
-                    FirstCar.Coord = cvPointToCoordinate(secondCenter);
                     FirstCar.Width = calculateDiameter(secondLargest.MaxX, secondLargest.MinX);
                     FirstCar.Height = calculateDiameter(secondLargest.MaxY, secondLargest.MinY);
+
+                }
+                lock (this) {
+                    FirstCar.Coord.Enqueue(cvPointToCoordinate(largestCenter));
+                    SecondCar.Coord.Enqueue(cvPointToCoordinate(secondCenter));
                 }
             }
-            else
-            {
-                FirstCar.Coord.XCoord = -1;
-                FirstCar.Coord.YCoord = -1;
-                FirstCar.Width = -1;
-                FirstCar.Height = -1;
-
-                SecondCar.Coord.XCoord = -1;
-                SecondCar.Coord.YCoord = -1;
-                SecondCar.Width = -1;
-                SecondCar.Height = -1;
-            }
-        }
-
-        private Coordinate calculateCenter(CvBlob blob)
-        {
-            if (blob == null)
-            {
-                return new Coordinate(-1, -1);
-            }
-            CvPoint center = blob.CalcCentroid();
-            return new Coordinate(center.X, center.Y);
         }
 
         private CvBlob getLargestBlob(int minBlobSize, int maxBlobSize)
@@ -189,6 +175,5 @@ namespace S1LightcycleNET
         {
             return max - min;
         }
-
     }
 }
