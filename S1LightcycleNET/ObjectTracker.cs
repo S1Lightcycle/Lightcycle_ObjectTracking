@@ -9,6 +9,9 @@ namespace S1LightcycleNET
 {
     public class ObjectTracker
     {
+
+        private static object Lock = new object();
+
         public Robot FirstCar { get; set; }
         public Robot SecondCar { get; set; }
 
@@ -97,6 +100,8 @@ namespace S1LightcycleNET
                 blobs = new CvBlobs();
                 blobs.Label(src);
 
+                blobs.FilterByArea(BLOB_MIN_SIZE, BLOB_MAX_SIZE);
+
                 var blobList = SortBlobsBySize(blobs);
 
                 CvBlob largest = null;
@@ -147,6 +152,7 @@ namespace S1LightcycleNET
                     SecondCar.Width = calculateDiameter(secondLargest.MaxX, secondLargest.MinX);
                     SecondCar.Height = calculateDiameter(secondLargest.MaxY, secondLargest.MinY);
 
+                    EnqueuePlayers(cvPointToCoordinate(largestCenter), cvPointToCoordinate(secondCenter));
                 }
                 else
                 {
@@ -157,18 +163,18 @@ namespace S1LightcycleNET
                     FirstCar.Width = calculateDiameter(secondLargest.MaxX, secondLargest.MinX);
                     FirstCar.Height = calculateDiameter(secondLargest.MaxY, secondLargest.MinY);
 
-                }
-                lock (this) {
-                    FirstCar.Coord.Enqueue(cvPointToCoordinate(largestCenter));
-                    SecondCar.Coord.Enqueue(cvPointToCoordinate(secondCenter));
+                    EnqueuePlayers(cvPointToCoordinate(secondCenter), cvPointToCoordinate(largestCenter));
                 }
             }
         }
 
-        private CvBlob getLargestBlob(int minBlobSize, int maxBlobSize)
+        private void EnqueuePlayers(Coordinate FirstPlayer, Coordinate SecondPlayer)
         {
-            blobs.FilterByArea(minBlobSize, maxBlobSize);
-            return blobs.LargestBlob();
+            lock(ObjectTracker.Lock)
+            {
+                FirstCar.Coord.Enqueue(FirstPlayer);
+                SecondCar.Coord.Enqueue(SecondPlayer);
+            }
         }
 
         private Coordinate cvPointToCoordinate(CvPoint point)
