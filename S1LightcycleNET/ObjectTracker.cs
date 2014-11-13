@@ -3,6 +3,7 @@ using OpenCvSharp;
 using OpenCvSharp.Blob;
 using System.Collections.Generic;
 using System.Threading;
+using System.Linq;
 
 namespace S1LightcycleNET
 {
@@ -22,7 +23,6 @@ namespace S1LightcycleNET
 
         private readonly VideoCapture capture;
         private readonly CvWindow blobWindow;
-        private readonly CvWindow subWindow;
 
         private readonly BackgroundSubtractor subtractor;
 
@@ -37,7 +37,6 @@ namespace S1LightcycleNET
             //webcam
             capture = new VideoCapture(0);
             blobWindow = new CvWindow("blobs");
-            subWindow = new CvWindow("subtracted");
 
             //setting capture resolution
             capture.Set(CAPTURE_WIDTH_PROPERTY, width);
@@ -56,6 +55,7 @@ namespace S1LightcycleNET
         }
 
         public void startTracking() {
+            oldCar = CvPoint.Empty;
             Thread trackingThread = new Thread(this.track);
             IsTracking = true;
             trackingThread.Priority = ThreadPriority.Highest;
@@ -97,23 +97,28 @@ namespace S1LightcycleNET
                 blobs = new CvBlobs();
                 blobs.Label(src);
 
-                IplImage render = new IplImage(src.Size, BitDepth.U8, 3);
+                var blobList = SortBlobsBySize(blobs);
 
-                CvBlob largest = getLargestBlob(BLOB_MIN_SIZE, BLOB_MAX_SIZE);
+                CvBlob largest = null;
                 CvBlob secondLargest = null;
 
-                if (largest != null)
+                if (blobList.Count >= 2)
                 {
-                    secondLargest = getLargestBlob(largest.Area, largest.Area);
+                    largest = blobList[0];
+                    secondLargest = blobList[1];
                 }
+
+                IplImage render = new IplImage(src.Size, BitDepth.U8, 3);
 
                 blobs.RenderBlobs(src, render);
 
                 blobWindow.ShowImage(render);
-                subWindow.ShowImage(src);
 
                 Cv2.WaitKey(1);
-                linearPrediction(largest, secondLargest);
+                if ((largest != null) && (secondLargest != null))
+                {
+                    linearPrediction(largest, secondLargest);
+                }
             }
         }
 
@@ -174,6 +179,18 @@ namespace S1LightcycleNET
         private int calculateDiameter(int max, int min)
         {
             return max - min;
+        }
+
+        private List<CvBlob> SortBlobsBySize(CvBlobs blobs)
+        {
+            List<CvBlob> blobList = new List<CvBlob>();
+
+            foreach(CvBlob blob in blobs.Values)
+            {
+                blobList.Add(blob);
+            }
+
+            return blobList.OrderByDescending(x => x.Area).ToList();
         }
     }
 }
