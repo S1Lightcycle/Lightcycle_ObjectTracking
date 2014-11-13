@@ -8,6 +8,9 @@ namespace S1LightcycleNET
 {
     public class Robot
     {
+
+        public static readonly Robot INVALID = null;
+
         public Coordinate Coord { get; set; }
         public double Width { get; set; }
         public double Height { get; set; }

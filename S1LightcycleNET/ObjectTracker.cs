@@ -1,17 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
-
-using System.Drawing;
-using System.Windows.Forms;
-using System.Windows.Forms.VisualStyles;
-using OpenCvSharp.CPlusPlus;
-using OpenCvSharp.Utilities;
+﻿using OpenCvSharp.CPlusPlus;
 using OpenCvSharp;
 using OpenCvSharp.Blob;
+using System.Collections.Generic;
 
 namespace S1LightcycleNET
 {
@@ -20,11 +10,17 @@ namespace S1LightcycleNET
         public Robot FirstCar { get; set; }
         public Robot SecondCar { get; set; }
 
+        public Queue<Coordinate> Player1PosQueue { get; set; }
+        public Queue<Coordinate> Player2PosQueue { get; set; }
+
         private const int CAPTURE_WIDTH_PROPERTY = 3;
         private const int CAPTURE_HEIGHT_PROPERTY = 4;
 
-        private const int BLOB_MIN_SIZE = 2500;
-        private const int BLOB_MAX_SIZE = 50000;
+        public int BLOB_MIN_SIZE { get; set; }
+        public int BLOB_MAX_SIZE { get; set; }
+
+        //determines how fast stationary objects are incorporated into the background mask ( higher = faster)
+        public double LEARNING_RATE { get; set; }
 
         private readonly VideoCapture capture;
         private readonly CvWindow blobWindow;
@@ -38,8 +34,11 @@ namespace S1LightcycleNET
 
         private CvPoint oldCar;
 
-
         public ObjectTracker(int width = 1000, int height = 800) {
+
+            Player1PosQueue = new Queue<Coordinate>();
+            Player2PosQueue = new Queue<Coordinate>();
+
             //webcam
             capture = new VideoCapture(0);
             blobWindow = new CvWindow("blobs");
@@ -53,8 +52,12 @@ namespace S1LightcycleNET
             subtractor = new BackgroundSubtractorMOG2();
 
             oldCar = CvPoint.Empty;
-            FirstCar = new Robot(new Coordinate(-1, -1), -1, -1);
-            SecondCar = new Robot(new Coordinate(-1, -1), -1, -1);
+            FirstCar = Robot.INVALID;
+            SecondCar = Robot.INVALID;
+
+            BLOB_MIN_SIZE = 2500;
+            BLOB_MAX_SIZE = 50000;
+            LEARNING_RATE = 0.001;
         }
 
 
@@ -72,19 +75,15 @@ namespace S1LightcycleNET
                 capture.Read(frame);
             }
 
-            //determines how fast stationary objects are incorporated into the background mask ( higher = faster)
-            double learningRate = 0.001;
-
             Mat sub = new Mat();
 
             //perform background subtraction with selected subtractor.
-            subtractor.Run(frame, sub, learningRate);
+            subtractor.Run(frame, sub, LEARNING_RATE);
 
             IplImage src = (IplImage)sub;
 
             //binarize image
             Cv.Threshold(src, src, 250, 255, ThresholdType.Binary);
-
 
             IplConvKernel element = Cv.CreateStructuringElementEx(4, 4, 0, 0, ElementShape.Rect, null);
             Cv.Erode(src, src, element, 1);
@@ -97,10 +96,9 @@ namespace S1LightcycleNET
             CvBlob largest = getLargestBlob(BLOB_MIN_SIZE, BLOB_MAX_SIZE);
             CvBlob secondLargest = null;
 
-
             if (largest != null)
             {
-                secondLargest = getLargestBlob(largest.Area - 1500, largest.Area);
+                secondLargest = getLargestBlob(largest.Area, largest.Area);
             }
 
             blobs.RenderBlobs(src, render);
@@ -108,18 +106,21 @@ namespace S1LightcycleNET
             blobWindow.ShowImage(render);
             subWindow.ShowImage(src);
 
-            
-
             Cv2.WaitKey(1);
+            AssosciateBlobsWithPlayers(largest, secondLargest);
 
-            //compare distance between last largest blob and current largest and second largest blob
-            //if distance between the last largest and current largest is shorter than between the last largest and second largest 
-            //return the current largest as first element
-            //else return the second largest as second element
-            linearPrediction(largest, secondLargest);
+            Player1PosQueue.Enqueue(FirstCar.Coord);
+            Player2PosQueue.Enqueue(SecondCar.Coord);
         }
 
-        private void linearPrediction(CvBlob largest, CvBlob secondLargest)
+        /// <summary>
+        /// Compares the distance between the largest blob of the last cycle and the current largest and second largest blob.
+        /// If the distance between the last largest and current largest is shorter than between the last largest and second largest 
+        /// it returns the current largest as first element, otherwise it returns the second largest as second element
+        /// </summary>
+        /// <param name="largest">Largest detected blob</param>
+        /// <param name="secondLargest">Second largest detected blob</param>
+        private void AssosciateBlobsWithPlayers(CvBlob largest, CvBlob secondLargest)
         {
             if (largest != null)
             {
@@ -147,30 +148,14 @@ namespace S1LightcycleNET
                     FirstCar.Coord = cvPointToCoordinate(secondCenter);
                     FirstCar.Width = calculateDiameter(secondLargest.MaxX, secondLargest.MinX);
                     FirstCar.Height = calculateDiameter(secondLargest.MaxY, secondLargest.MinY);
+
                 }
             }
             else
             {
-                FirstCar.Coord.XCoord = -1;
-                FirstCar.Coord.YCoord = -1;
-                FirstCar.Width = -1;
-                FirstCar.Height = -1;
-
-                SecondCar.Coord.XCoord = -1;
-                SecondCar.Coord.YCoord = -1;
-                SecondCar.Width = -1;
-                SecondCar.Height = -1;
+                FirstCar = Robot.INVALID;
+                SecondCar = Robot.INVALID;
             }
-        }
-
-        private Coordinate calculateCenter(CvBlob blob)
-        {
-            if (blob == null)
-            {
-                return new Coordinate(-1, -1);
-            }
-            CvPoint center = blob.CalcCentroid();
-            return new Coordinate(center.X, center.Y);
         }
 
         private CvBlob getLargestBlob(int minBlobSize, int maxBlobSize)
