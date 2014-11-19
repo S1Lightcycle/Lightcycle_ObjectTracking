@@ -11,7 +11,7 @@ namespace S1LightcycleNET
     {
 
         private readonly VideoCapture capture;
-        private readonly CvWindow blobWindow;
+        private CvWindow blobWindow;
         private readonly BackgroundSubtractor subtractor;
         private Mat frame;
         private CvBlobs blobs;
@@ -33,7 +33,6 @@ namespace S1LightcycleNET
         public ObjectTracker(int width = 640, int height = 480) {
             //webcam
             capture = new VideoCapture(0);
-            blobWindow = new CvWindow("blobs");
 
             //setting capture resolution
             capture.Set(CAPTURE_WIDTH_PROPERTY, width);
@@ -52,6 +51,7 @@ namespace S1LightcycleNET
         }
 
         public void StartTracking() {
+            blobWindow = new CvWindow("blobs");
             oldFirstCar = CvPoint.Empty;
             oldSecondCar = CvPoint.Empty;
             Thread trackingThread = new Thread(this.Track);
