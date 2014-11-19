@@ -61,7 +61,7 @@ namespace S1LightcycleNET
 
         }
 
-        public void Stoptracking() {
+        public void StopTracking() {
             IsTracking = false;
         }
 
