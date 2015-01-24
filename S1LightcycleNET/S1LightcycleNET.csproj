@@ -118,7 +118,6 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CalibrateCamera.cs" />
     <Compile Include="Coordinate.cs" />
     <Compile Include="ObjectTracker.cs" />
     <Compile Include="Program.cs" />
