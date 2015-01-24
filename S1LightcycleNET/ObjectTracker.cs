@@ -36,7 +36,7 @@ namespace S1LightcycleNET
             //webcam
             _capture = new VideoCapture(0);
             _blobWindow = new CvWindow("_blobs");
-
+                
             //setting _capture resolution
             _capture.Set(CaptureWidthProperty, width);
             _capture.Set(CaptureHeightProperty, height);
@@ -48,7 +48,7 @@ namespace S1LightcycleNET
             FirstCar = new Robot(-1, -1);
             SecondCar = new Robot(-1, -1);
 
-            BlobMinSize = 2500;
+            BlobMinSize = 250;
             BlobMaxSize = 50000;
             LearningRate = 0.001;
         }
