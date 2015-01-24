@@ -1,18 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
-
-using System.Drawing;
-using OpenCvSharp.CPlusPlus;
-using OpenCvSharp.Utilities;
-using OpenCvSharp;
-using OpenCvSharp.Blob;
-using System.Collections;
-
-namespace S1LightcycleNET
+﻿namespace S1LightcycleNET
 {
     class Program
     {

@@ -10,86 +10,81 @@ namespace S1LightcycleNET
     public class ObjectTracker
     {
 
-        private static object Lock = new object();
+        private readonly VideoCapture _capture;
+        private readonly CvWindow _blobWindow;
+        private readonly BackgroundSubtractor _subtractor;
+        private Mat _frame;
+        private CvBlobs _blobs;
+        private CvPoint _oldFirstCar;
+        private CvPoint _oldSecondCar;
+        private bool _isTracking;
+        private const int CaptureWidthProperty = 3;
+        private const int CaptureHeightProperty = 4;
+        private readonly static object Lock = new object();
+
+        private Thread _trackingThread;
 
         public Robot FirstCar { get; set; }
         public Robot SecondCar { get; set; }
-
-        private const int CAPTURE_WIDTH_PROPERTY = 3;
-        private const int CAPTURE_HEIGHT_PROPERTY = 4;
-
-        public int BLOB_MIN_SIZE { get; set; }
-        public int BLOB_MAX_SIZE { get; set; }
+        public int BlobMinSize { get; set; }
+        public int BlobMaxSize { get; set; }
 
         //determines how fast stationary objects are incorporated into the background mask ( higher = faster)
-        public double LEARNING_RATE { get; set; }
-
-        private readonly VideoCapture capture;
-        private readonly CvWindow blobWindow;
-
-        private readonly BackgroundSubtractor subtractor;
-
-        private Mat frame;
-
-        private CvBlobs blobs;
-
-        private CvPoint oldFirstCar;
-        private CvPoint oldSecondCar;
-        private bool IsTracking;
+        public double LearningRate { get; set; }
 
         public ObjectTracker(int width = 640, int height = 480) {
             //webcam
-            capture = new VideoCapture(0);
-            blobWindow = new CvWindow("blobs");
+            _capture = new VideoCapture(0);
+            _blobWindow = new CvWindow("_blobs");
 
-            //setting capture resolution
-            capture.Set(CAPTURE_WIDTH_PROPERTY, width);
-            capture.Set(CAPTURE_HEIGHT_PROPERTY, height);
+            //setting _capture resolution
+            _capture.Set(CaptureWidthProperty, width);
+            _capture.Set(CaptureHeightProperty, height);
 
-            //Background subtractor, alternatives: MOG, GMG
-            subtractor = new BackgroundSubtractorMOG2();
+            //Background _subtractor, alternatives: MOG, GMG
+            _subtractor = new BackgroundSubtractorMOG2();
 
-            oldFirstCar = CvPoint.Empty;
+            _oldFirstCar = CvPoint.Empty;
             FirstCar = new Robot(-1, -1);
             SecondCar = new Robot(-1, -1);
 
-            BLOB_MIN_SIZE = 2500;
-            BLOB_MAX_SIZE = 50000;
-            LEARNING_RATE = 0.001;
+            BlobMinSize = 2500;
+            BlobMaxSize = 50000;
+            LearningRate = 0.001;
         }
 
-        public void startTracking() {
-            oldFirstCar = CvPoint.Empty;
-            oldSecondCar = CvPoint.Empty;
-            Thread trackingThread = new Thread(this.track);
-            IsTracking = true;
-            trackingThread.Priority = ThreadPriority.Highest;
-            trackingThread.Start();
-
+        public void StartTracking() {
+            _oldFirstCar = CvPoint.Empty;
+            _oldSecondCar = CvPoint.Empty;
+            _trackingThread = new Thread(this.Track);
+            _isTracking = true;
+            _trackingThread.Priority = ThreadPriority.Highest;
+            _trackingThread.Start();
         }
 
-        public void stoptracking() {
-            IsTracking = false;
+        public void StopTracking() {
+            _isTracking = false;
+            _trackingThread.Abort();
         }
 
-        public void track()
+        public void Track()
         {
-            while (IsTracking) { 
-                frame = new Mat();
+            while (_isTracking) { 
+                _frame = new Mat();
 
-                //get new frame from camera
-                capture.Read(frame);
+                //get new _frame from camera
+                _capture.Read(_frame);
 
-                //frame height == 0 => camera hasn't been initialized properly and provides garbage data
-                while (frame.Height == 0)
+                //_frame height == 0 => camera hasn't been initialized properly and provides garbage data
+                while (_frame.Height == 0)
                 {
-                    capture.Read(frame);
+                    _capture.Read(_frame);
                 }
 
                 Mat sub = new Mat();
 
-                //perform background subtraction with selected subtractor.
-                subtractor.Run(frame, sub, LEARNING_RATE);
+                //perform background subtraction with selected _subtractor.
+                _subtractor.Run(_frame, sub, LearningRate);
 
                 IplImage src = (IplImage)sub;
 
@@ -99,12 +94,12 @@ namespace S1LightcycleNET
                 IplConvKernel element = Cv.CreateStructuringElementEx(4, 4, 0, 0, ElementShape.Rect, null);
                 Cv.Erode(src, src, element, 1);
                 Cv.Dilate(src, src, element, 1);
-                blobs = new CvBlobs();
-                blobs.Label(src);
+                _blobs = new CvBlobs();
+                _blobs.Label(src);
 
-                blobs.FilterByArea(BLOB_MIN_SIZE, BLOB_MAX_SIZE);
+                _blobs.FilterByArea(BlobMinSize, BlobMaxSize);
 
-                var blobList = SortBlobsBySize(blobs);
+                var blobList = SortBlobsBySize(_blobs);
 
                 CvBlob largest = null;
                 CvBlob secondLargest = null;
@@ -121,17 +116,17 @@ namespace S1LightcycleNET
 
                 IplImage render = new IplImage(src.Size, BitDepth.U8, 3);
 
-                blobs.RenderBlobs(src, render);
+                _blobs.RenderBlobs(src, render);
 
-                blobWindow.ShowImage(render);
+                _blobWindow.ShowImage(render);
 
                 Cv2.WaitKey(1);
                 if ((largest != null) && (secondLargest != null))
                 {
-                    linearPrediction(largest, secondLargest);
+                    LinearPrediction(largest, secondLargest);
                 } else if ((largest != null) && (secondLargest == null))
                 {
-                    linearPrediction(largest);
+                    LinearPrediction(largest);
                 }
             }
         }
@@ -143,81 +138,81 @@ namespace S1LightcycleNET
         /// </summary>
         /// <param name="largest">Largest detected blob</param>
         /// <param name="secondLargest">Second largest detected blob</param>
-        private void linearPrediction(CvBlob largest, CvBlob secondLargest)
+        private void LinearPrediction(CvBlob largest, CvBlob secondLargest)
         {
             if (largest != null)
             {
                 CvPoint largestCenter = largest.CalcCentroid();
                 CvPoint secondCenter = secondLargest.CalcCentroid();
 
-                if ((oldFirstCar == CvPoint.Empty) || 
-                    ((oldFirstCar.DistanceTo(largestCenter) < oldFirstCar.DistanceTo(secondCenter)) && 
-                    oldSecondCar.DistanceTo(largestCenter) > oldSecondCar.DistanceTo(secondCenter)))
+                if ((_oldFirstCar == CvPoint.Empty) || 
+                    ((_oldFirstCar.DistanceTo(largestCenter) < _oldFirstCar.DistanceTo(secondCenter)) && 
+                    _oldSecondCar.DistanceTo(largestCenter) > _oldSecondCar.DistanceTo(secondCenter)))
                 {
-                    oldFirstCar = largestCenter;
-                    oldSecondCar = secondCenter;
+                    _oldFirstCar = largestCenter;
+                    _oldSecondCar = secondCenter;
                     
-                    FirstCar.Width = calculateDiameter(largest.MaxX, largest.MinX);
-                    FirstCar.Height = calculateDiameter(largest.MaxY, largest.MinY);
+                    FirstCar.Width = CalculateDiameter(largest.MaxX, largest.MinX);
+                    FirstCar.Height = CalculateDiameter(largest.MaxY, largest.MinY);
 
                     
-                    SecondCar.Width = calculateDiameter(secondLargest.MaxX, secondLargest.MinX);
-                    SecondCar.Height = calculateDiameter(secondLargest.MaxY, secondLargest.MinY);
+                    SecondCar.Width = CalculateDiameter(secondLargest.MaxX, secondLargest.MinX);
+                    SecondCar.Height = CalculateDiameter(secondLargest.MaxY, secondLargest.MinY);
 
-                    EnqueuePlayers(cvPointToCoordinate(largestCenter), cvPointToCoordinate(secondCenter));
+                    EnqueuePlayers(CvPointToCoordinate(largestCenter), CvPointToCoordinate(secondCenter));
                 }
                 else
                 {
-                    oldFirstCar = secondCenter;
-                    oldSecondCar = largestCenter;
+                    _oldFirstCar = secondCenter;
+                    _oldSecondCar = largestCenter;
 
-                    SecondCar.Width = calculateDiameter(largest.MaxX, largest.MinX);
-                    SecondCar.Height = calculateDiameter(largest.MaxY, largest.MinY);
+                    SecondCar.Width = CalculateDiameter(largest.MaxX, largest.MinX);
+                    SecondCar.Height = CalculateDiameter(largest.MaxY, largest.MinY);
 
-                    FirstCar.Width = calculateDiameter(secondLargest.MaxX, secondLargest.MinX);
-                    FirstCar.Height = calculateDiameter(secondLargest.MaxY, secondLargest.MinY);
+                    FirstCar.Width = CalculateDiameter(secondLargest.MaxX, secondLargest.MinX);
+                    FirstCar.Height = CalculateDiameter(secondLargest.MaxY, secondLargest.MinY);
 
-                    EnqueuePlayers(cvPointToCoordinate(secondCenter), cvPointToCoordinate(largestCenter));
+                    EnqueuePlayers(CvPointToCoordinate(secondCenter), CvPointToCoordinate(largestCenter));
                 }
             }
         }
 
-        private void linearPrediction(CvBlob blob)
+        private void LinearPrediction(CvBlob blob)
         {
             CvPoint center = blob.CalcCentroid();
 
-            if (oldFirstCar.DistanceTo(center) < oldSecondCar.DistanceTo(center))
+            if (_oldFirstCar.DistanceTo(center) < _oldSecondCar.DistanceTo(center))
             {
-                EnqueuePlayers(cvPointToCoordinate(center), null);
+                EnqueuePlayers(CvPointToCoordinate(center), null);
             }
             else
             {
-                EnqueuePlayers(null, cvPointToCoordinate(center));
+                EnqueuePlayers(null, CvPointToCoordinate(center));
             }
         }
 
-        private void EnqueuePlayers(Coordinate FirstPlayer, Coordinate SecondPlayer)
+        private void EnqueuePlayers(Coordinate firstPlayer, Coordinate secondPlayer)
         {
             lock(ObjectTracker.Lock)
             {
-                if (FirstPlayer != null)
+                if (firstPlayer != null)
                 {
-                    FirstCar.Coord.Enqueue(FirstPlayer);
+                    FirstCar.Coord.Enqueue(firstPlayer);
                 }
 
-                if (SecondPlayer != null)
+                if (secondPlayer != null)
                 {
-                    SecondCar.Coord.Enqueue(SecondPlayer);
+                    SecondCar.Coord.Enqueue(secondPlayer);
                 }
             }
         }
 
-        private Coordinate cvPointToCoordinate(CvPoint point)
+        private Coordinate CvPointToCoordinate(CvPoint point)
         {
             return new Coordinate(point.X, point.Y);
         }
 
-        private int calculateDiameter(int max, int min)
+        private int CalculateDiameter(int max, int min)
         {
             return max - min;
         }
