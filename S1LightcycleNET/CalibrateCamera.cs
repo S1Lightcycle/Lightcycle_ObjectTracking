@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace S1lightcycle {
+namespace S1LightcycleNET {
     public class CalibrateCamera {
         private VideoCapture _capture;
         private Mat _frame;
@@ -24,11 +24,11 @@ namespace S1lightcycle {
         private static CalibrateCamera instance;
 
         public int GetROIWidth() {
-            return S1LightcycleNET.Properties.Settings.Default.x2 - S1LightcycleNET.Properties.Settings.Default.x1;
+            return Properties.Settings.Default.x2 - Properties.Settings.Default.x1;
         }
 
         public int GetROIHeight() {
-            return S1LightcycleNET.Properties.Settings.Default.y2 - S1LightcycleNET.Properties.Settings.Default.y1;
+            return Properties.Settings.Default.y2 - Properties.Settings.Default.y1;
         }
 
         public VideoCapture GetVideoCapture() {
@@ -36,8 +36,8 @@ namespace S1lightcycle {
         }
 
         public CvPoint[] GetCalibrationPoints() {
-            CvPoint point1 = new CvPoint(S1LightcycleNET.Properties.Settings.Default.x1, S1LightcycleNET.Properties.Settings.Default.y1);
-            CvPoint point2 = new CvPoint(S1LightcycleNET.Properties.Settings.Default.x2, S1LightcycleNET.Properties.Settings.Default.y2);
+            CvPoint point1 = new CvPoint(Properties.Settings.Default.x1, Properties.Settings.Default.y1);
+            CvPoint point2 = new CvPoint(Properties.Settings.Default.x2, Properties.Settings.Default.y2);
             CalibrationPoints[0] = point1;
             CalibrationPoints[1] = point2;
             return this.CalibrationPoints;
@@ -91,14 +91,14 @@ namespace S1lightcycle {
                 CvPoint point = new CvPoint(x, y);
                 Cv.Circle(srcImg, point, 10, new CvColor(255, 0, 0), 5);
                 if (countClicks == 0) {
-                    S1LightcycleNET.Properties.Settings.Default.x1 = x;
-                    S1LightcycleNET.Properties.Settings.Default.y1 = y;
+                    Properties.Settings.Default.x1 = x;
+                    Properties.Settings.Default.y1 = y;
                 } else if (countClicks == 1) {
-                    S1LightcycleNET.Properties.Settings.Default.x2 = x;
-                    S1LightcycleNET.Properties.Settings.Default.y2 = y;
+                    Properties.Settings.Default.x2 = x;
+                    Properties.Settings.Default.y2 = y;
                 }
                 countClicks++;
-                S1LightcycleNET.Properties.Settings.Default.Save();
+                Properties.Settings.Default.Save();
                 cvFrame.Image = srcImg;
 
                 if (countClicks > 1) {
