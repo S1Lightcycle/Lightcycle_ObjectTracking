@@ -4,12 +4,14 @@ using OpenCvSharp.Blob;
 using System.Collections.Generic;
 using System.Threading;
 using System.Linq;
+using S1lightcycle;
+using System;
 
 namespace S1LightcycleNET
 {
     public class ObjectTracker
     {
-
+        private CalibrateCamera _calibration;
         private readonly VideoCapture _capture;
         private readonly CvWindow _blobWindow;
         private readonly BackgroundSubtractor _subtractor;
@@ -32,14 +34,16 @@ namespace S1LightcycleNET
         //determines how fast stationary objects are incorporated into the background mask ( higher = faster)
         public double LearningRate { get; set; }
 
-        public ObjectTracker(int width = 640, int height = 480) {
+        public ObjectTracker() {
             //webcam
-            _capture = new VideoCapture(0);
-            _blobWindow = new CvWindow("_blobs");
+            _calibration = CalibrateCamera.GetInstance();
+            _capture = _calibration.GetVideoCapture();
 
             //setting _capture resolution
-            _capture.Set(CaptureWidthProperty, width);
-            _capture.Set(CaptureHeightProperty, height);
+            _capture.Set(CaptureWidthProperty, _calibration.camResolutionWidth);
+            _capture.Set(CaptureHeightProperty, _calibration.camResolutionHeight);
+
+            _blobWindow = new CvWindow("_blobs");
 
             //Background _subtractor, alternatives: MOG, GMG
             _subtractor = new BackgroundSubtractorMOG2();
@@ -48,9 +52,9 @@ namespace S1LightcycleNET
             FirstCar = new Robot(-1, -1);
             SecondCar = new Robot(-1, -1);
 
-            BlobMinSize = 2500;
+            /*BlobMinSize = 2500;
             BlobMaxSize = 50000;
-            LearningRate = 0.001;
+            LearningRate = 0.001;*/
         }
 
         public void StartTracking() {
@@ -80,12 +84,20 @@ namespace S1LightcycleNET
                 {
                     _capture.Read(_frame);
                 }
-
+                
                 Mat sub = new Mat();
 
-                //perform background subtraction with selected _subtractor.
-                _subtractor.Run(_frame, sub, LearningRate);
+                
+                //camera calibration - ROI
+                CvPoint[] roiPoints = _calibration.GetCalibrationPoints();
+                CvSize size = new CvSize(_calibration.GetROIWidth(), _calibration.GetROIHeight());
+                CvRect roiRect = new CvRect(roiPoints[0], size);
+                Mat srcRoi = _frame.Clone(roiRect);
 
+                //IplImage tmpImg = srcRoi.ToIplImage().Clone();
+
+                //perform background subtraction with selected _subtractor.
+                _subtractor.Run(srcRoi, sub, LearningRate);
                 IplImage src = (IplImage)sub;
 
                 //binarize image
@@ -104,20 +116,24 @@ namespace S1LightcycleNET
                 CvBlob largest = null;
                 CvBlob secondLargest = null;
 
+                CvBlobs blobs = _blobs.Clone();
+
                 if (blobList.Count >= 1)
                 {
                     largest = blobList[0];
+                    blobs.FilterByLabel(largest.Label);
                 }
 
                 if (blobList.Count >= 2)
                 {
                     secondLargest = blobList[1];
+                    _blobs.FilterByLabel(secondLargest.Label);
                 }
 
                 IplImage render = new IplImage(src.Size, BitDepth.U8, 3);
-
+                
                 _blobs.RenderBlobs(src, render);
-
+                blobs.RenderBlobs(render, render);
                 _blobWindow.ShowImage(render);
 
                 Cv2.WaitKey(1);
