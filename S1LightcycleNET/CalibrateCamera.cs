@@ -1,13 +1,7 @@
 ﻿using OpenCvSharp;
 using OpenCvSharp.CPlusPlus;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace S1LightcycleNET {
     public class CalibrateCamera {
@@ -19,9 +13,9 @@ namespace S1LightcycleNET {
         public int camResolutionHeight = 720;
         private CvPoint[] CalibrationPoints = new CvPoint[2];
         private int countClicks = 0;
-        private CvWindow cvFrame;
-        private IplImage srcImg;
-        private static CalibrateCamera instance;
+        private CvWindow _cvFrame;
+        private IplImage _srcImg;
+        private static CalibrateCamera _instance;
 
         public int GetROIWidth() {
             return Properties.Settings.Default.x2 - Properties.Settings.Default.x1;
@@ -45,8 +39,8 @@ namespace S1LightcycleNET {
 
 
         public static CalibrateCamera GetInstance() {
-            if (instance == null) instance = new CalibrateCamera();
-            return instance;
+            if (_instance == null) _instance = new CalibrateCamera();
+            return _instance;
         }
 
 
@@ -74,9 +68,9 @@ namespace S1LightcycleNET {
                 Thread.Sleep(500);
             }
             
-            srcImg = _frame.ToIplImage();
-            cvFrame = new CvWindow("edge calibration editor", WindowMode.Fullscreen, srcImg);
-            cvFrame.OnMouseCallback += new CvMouseCallback(OnMouseDown);
+            _srcImg = _frame.ToIplImage();
+            _cvFrame = new CvWindow("edge calibration editor", WindowMode.Fullscreen, _srcImg);
+            _cvFrame.OnMouseCallback += new CvMouseCallback(OnMouseDown);
             
         }
 
@@ -89,7 +83,7 @@ namespace S1LightcycleNET {
                 Console.WriteLine("y-coord: " + y);
 
                 CvPoint point = new CvPoint(x, y);
-                Cv.Circle(srcImg, point, 10, new CvColor(255, 0, 0), 5);
+                Cv.Circle(_srcImg, point, 10, new CvColor(255, 0, 0), 5);
                 if (countClicks == 0) {
                     Properties.Settings.Default.x1 = x;
                     Properties.Settings.Default.y1 = y;
@@ -99,10 +93,10 @@ namespace S1LightcycleNET {
                 }
                 countClicks++;
                 Properties.Settings.Default.Save();
-                cvFrame.Image = srcImg;
+                _cvFrame.Image = _srcImg;
 
                 if (countClicks > 1) {
-                    cvFrame.Close();
+                    _cvFrame.Close();
                     
                 }
             }

@@ -4,8 +4,6 @@ using OpenCvSharp.Blob;
 using System.Collections.Generic;
 using System.Threading;
 using System.Linq;
-using S1lightcycle;
-using System;
 
 namespace S1LightcycleNET
 {
