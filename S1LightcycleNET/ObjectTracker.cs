@@ -73,6 +73,7 @@ namespace S1LightcycleNET
 
         public void Track()
         {
+            CvWindow asdf = new CvWindow("roi");
             while (_isTracking) { 
                 _frame = new Mat();
 
@@ -91,10 +92,12 @@ namespace S1LightcycleNET
                 //camera calibration - ROI
                 CvPoint[] roiPoints = _calibration.GetCalibrationPoints();
                 CvSize size = new CvSize(_calibration.GetROIWidth(), _calibration.GetROIHeight());
+                //CvSize size = new CvSize(_calibration.GetROIHeight(), _calibration.GetROIWidth());
                 CvRect roiRect = new CvRect(roiPoints[0], size);
                 Mat srcRoi = _frame.Clone(roiRect);
 
-                //IplImage tmpImg = srcRoi.ToIplImage().Clone();
+                IplImage tmpImg = srcRoi.ToIplImage().Clone();
+                asdf.ShowImage(tmpImg);
 
                 //perform background subtraction with selected _subtractor.
                 _subtractor.Run(srcRoi, sub, LearningRate);
