@@ -178,7 +178,7 @@ namespace S1LightcycleNET
                     SecondCar.Width = CalculateDiameter(secondLargest.MaxX, secondLargest.MinX);
                     SecondCar.Height = CalculateDiameter(secondLargest.MaxY, secondLargest.MinY);
 
-                    EnqueuePlayers(CvPointToCoordinate(largestCenter), CvPointToCoordinate(secondCenter));
+                    EnqueuePlayers(new Coordinate(largestCenter), new Coordinate(secondCenter));
                 }
                 else
                 {
@@ -191,7 +191,7 @@ namespace S1LightcycleNET
                     FirstCar.Width = CalculateDiameter(secondLargest.MaxX, secondLargest.MinX);
                     FirstCar.Height = CalculateDiameter(secondLargest.MaxY, secondLargest.MinY);
 
-                    EnqueuePlayers(CvPointToCoordinate(secondCenter), CvPointToCoordinate(largestCenter));
+                    EnqueuePlayers(new Coordinate(secondCenter), new Coordinate(largestCenter));
                 }
             }
         }
@@ -202,11 +202,11 @@ namespace S1LightcycleNET
 
             if (_oldFirstCar.DistanceTo(center) < _oldSecondCar.DistanceTo(center))
             {
-                EnqueuePlayers(CvPointToCoordinate(center), null);
+                EnqueuePlayers(new Coordinate(center), null);
             }
             else
             {
-                EnqueuePlayers(null, CvPointToCoordinate(center));
+                EnqueuePlayers(null, new Coordinate(center));
             }
         }
 
@@ -224,11 +224,6 @@ namespace S1LightcycleNET
                     SecondCar.Coord.Enqueue(secondPlayer);
                 }
             }
-        }
-
-        private Coordinate CvPointToCoordinate(CvPoint point)
-        {
-            return new Coordinate(point.X, point.Y);
         }
 
         private int CalculateDiameter(int max, int min)
