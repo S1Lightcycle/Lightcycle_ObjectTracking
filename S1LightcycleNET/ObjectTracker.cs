@@ -21,6 +21,7 @@ namespace S1LightcycleNET
         private const int CaptureWidthProperty = 3;
         private const int CaptureHeightProperty = 4;
         private readonly static object Lock = new object();
+        private bool arePlayersInitialized;
 
         private Thread _trackingThread;
 
@@ -49,6 +50,8 @@ namespace S1LightcycleNET
             _oldFirstCar = CvPoint.Empty;
             FirstCar = new Robot(-1, -1);
             SecondCar = new Robot(-1, -1);
+
+            arePlayersInitialized = false;
 
             /*BlobMinSize = 2500;
             BlobMaxSize = 50000;
@@ -162,6 +165,18 @@ namespace S1LightcycleNET
                 CvPoint largestCenter = largest.CalcCentroid();
                 CvPoint secondCenter = secondLargest.CalcCentroid();
 
+                if (!arePlayersInitialized)
+                {
+                    if (largest.MaxX < _calibration.GetROIWidth()/2)
+                    {
+                        EnqueuePlayers(new Coordinate(largestCenter), new Coordinate(secondCenter));
+                    } else
+                    {
+                        EnqueuePlayers(new Coordinate(secondCenter), new Coordinate(largestCenter));
+                    }
+                    arePlayersInitialized = true;
+                }
+
                 if ((_oldFirstCar == CvPoint.Empty) || 
                     ((_oldFirstCar.DistanceTo(largestCenter) < _oldFirstCar.DistanceTo(secondCenter)) && 
                     _oldSecondCar.DistanceTo(largestCenter) > _oldSecondCar.DistanceTo(secondCenter)))
@@ -172,7 +187,6 @@ namespace S1LightcycleNET
                     FirstCar.Width = CalculateDiameter(largest.MaxX, largest.MinX);
                     FirstCar.Height = CalculateDiameter(largest.MaxY, largest.MinY);
 
-                    
                     SecondCar.Width = CalculateDiameter(secondLargest.MaxX, secondLargest.MinX);
                     SecondCar.Height = CalculateDiameter(secondLargest.MaxY, secondLargest.MinY);
 
