@@ -98,7 +98,11 @@ namespace S1LightcycleNET
                 Thread.Sleep(500);
             }
 
+            CvFont font = new CvFont(FontFace.HersheySimplex, 1.0, 1.0, 0, 2);
+
+
             _srcImg = _frame.ToIplImage();
+            _srcImg.PutText("Click the red squares with your mouse", new CvPoint(_srcImg.Width / 2, _srcImg.Height / 2), font, new CvScalar(0, 0, 0));
             _cvFrame = new CvWindow("edge calibration editor", WindowMode.Fullscreen, _srcImg);
             _cvFrame.OnMouseCallback += new CvMouseCallback(OnMouseDown);
 
